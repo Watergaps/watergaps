@@ -7,7 +7,9 @@
         
         <link rel="stylesheet" href="resources/ol.css">
         <link rel="stylesheet" href="resources/ol-layerswitcher.css">
-        <link rel="stylesheet" href="resources/qgis2web.css">
+        
+        <script src="resources/ol.js"></script>
+        <script src="resources/proj4.js"></script>
         
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
 
@@ -24,20 +26,17 @@
     </head>
     <body>
         <div id="map"></div>
-        
-        <script src="resources/ol.js"></script>
-        <script src="resources/proj4.js"></script>
-        <script>
-            proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
-        </script>
 
         <script>
-        // 1. Initialize the Map manually (Bypassing the broken qgis2web.js)
+        // Set up the projection
+        proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
+        
+        // Initialize the Map
         var map = new ol.Map({
             target: 'map',
             layers: [
                 new ol.layer.Tile({
-                    source: new ol.source.OSM() // Adds a basic base map
+                    source: new ol.source.OSM()
                 })
             ],
             view: new ol.View({
@@ -46,39 +45,49 @@
             })
         });
 
-        // 2. The function to pull data from your R2 storage
-        async function loadR2Layer(fileName) {
+        async function loadR2Layer(fileName, color) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             
+            console.log("Attempting to fetch: " + fileName);
+
             const source = new ol.source.Vector({
                 loader: async function(extent, resolution, projection) {
                     try {
                         const response = await fetch(url);
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        
                         for await (const feature of flatgeobuf.deserialize(response.body, undefined)) {
-                            // Convert the coordinates to match the map
                             feature.getGeometry().transform('EPSG:4326', projection);
                             this.addFeature(feature);
                         }
+                        console.log("Successfully loaded: " + fileName);
                     } catch (err) {
-                        console.error("Error loading " + fileName, err);
+                        console.error("CRITICAL ERROR loading " + fileName + ":", err);
                     }
                 }
             });
 
             const vectorLayer = new ol.layer.Vector({
-                source: source
+                source: source,
+                style: new ol.style.Style({
+                    stroke: new ol.style.Stroke({ color: color, width: 2 }),
+                    image: new ol.style.Circle({
+                        radius: 5,
+                        fill: new ol.style.Fill({ color: color })
+                    })
+                })
             });
 
             map.addLayer(vectorLayer);
         }
 
-        // 3. Load your 6 files
-        loadR2Layer('TD reach.fgb');
-        loadR2Layer('TD watersheds endorheic streams.fgb');
-        loadR2Layer('TD watersheds exorheic streams.fgb');
-        loadR2Layer('points downstream of pp.fgb');
-        loadR2Layer('points upstream of pp.fgb');
-        loadR2Layer('pour points into the td.fgb');
+        // Load your 6 files with distinct colors
+        loadR2Layer('TD reach.fgb', 'blue');
+        loadR2Layer('TD watersheds endorheic streams.fgb', 'green');
+        loadR2Layer('TD watersheds exorheic streams.fgb', 'orange');
+        loadR2Layer('points downstream of pp.fgb', 'red');
+        loadR2Layer('points upstream of pp.fgb', 'purple');
+        loadR2Layer('pour points into the td.fgb', 'black');
         </script>
     </body>
 </html>
