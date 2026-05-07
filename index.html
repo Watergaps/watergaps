@@ -12,31 +12,27 @@
         <style>
             html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
             
-            /* Title and Abstract Panel */
             #info-panel {
-                position: absolute; top: 10px; left: 50px; z-index: 1000;
-                background: rgba(255, 255, 255, 0.9); padding: 15px;
-                border-radius: 4px; border: 1px solid #ccc; max-width: 300px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                position: absolute; top: 15px; left: 60px; z-index: 1000;
+                background: rgba(255, 255, 255, 0.95); padding: 18px;
+                border-radius: 6px; border: 1px solid #bbb; max-width: 320px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             }
-            #info-panel h1 { margin: 0 0 10px 0; font-size: 18px; color: #333; }
-            #info-panel p { margin: 0; font-size: 13px; line-height: 1.4; color: #666; }
+            #info-panel h1 { margin: 0 0 8px 0; font-size: 20px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+            #info-panel p { margin: 0; font-size: 13px; line-height: 1.5; color: #444; }
+            #info-panel .disclaimer { margin-top: 10px; font-style: italic; font-size: 12px; color: #e67e22; border-top: 1px solid #eee; padding-top: 8px; }
 
-            /* Attribute Popup styling */
             .ol-popup {
                 position: absolute; background-color: white; padding: 15px; border-radius: 8px;
-                border: 1px solid #ccc; bottom: 12px; left: -50px; min-width: 250px;
-                box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+                border: 1px solid #ccc; bottom: 12px; left: -50px; min-width: 260px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             }
-            .ol-popup:after, .ol-popup:before {
-                top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none;
-            }
-            .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; }
-            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
+            .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none; }
+            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; font-size: 18px; }
             .ol-popup-closer:after { content: "✖"; }
             
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            td { padding: 4px; border-bottom: 1px solid #eee; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+            td { padding: 6px; border-bottom: 1px solid #eee; }
             tr:nth-child(even) { background: #f9f9f9; }
         </style>
         <title>Global Transverse Drainages</title>
@@ -45,6 +41,7 @@
         <div id="info-panel">
             <h1>Global Transverse Drainages</h1>
             <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
+            <p class="disclaimer">Note: This map is a work in progress and subject to change.</p>
         </div>
 
         <div id="map"></div>
@@ -55,17 +52,15 @@
         </div>
 
         <script>
-        // Standard Web Mercator projection
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
 
-        // POPUP ELEMENTS
         var container = document.getElementById('popup');
         var content = document.getElementById('popup-content');
         var closer = document.getElementById('popup-closer');
         var overlay = new ol.Overlay({ element: container, autoPan: true });
-        closer.onclick = function() { overlay.setPosition(undefined); closer.blur(); return false; };
+        closer.onclick = function() { overlay.setPosition(undefined); return false; };
 
-        // BASE MAPS
+        // 1. BASE LAYER
         var esriTopo = new ol.layer.Tile({
             title: 'Esri World Topo',
             type: 'base',
@@ -73,19 +68,31 @@
             source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', crossOrigin: 'anonymous' })
         });
 
+        // 2. OPENTOPO OVERLAY (Re-added)
+        var openTopo = new ol.layer.Tile({
+            title: 'OpenTopoMap',
+            visible: false, // Set to true if you want it on by default
+            opacity: 0.7,
+            source: new ol.source.XYZ({ 
+                url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', 
+                crossOrigin: 'anonymous' 
+            })
+        });
+
+        // Create Groups
+        var baseGroup = new ol.layer.Group({ title: 'Base Maps', layers: [esriTopo] });
+        var overlayGroup = new ol.layer.Group({ title: 'Overlays', layers: [openTopo] });
+
         var map = new ol.Map({
             target: 'map',
             overlays: [overlay],
-            layers: [
-                new ol.layer.Group({ title: 'Base Maps', layers: [esriTopo] }),
-                new ol.layer.Group({ title: 'Drainage Data', layers: [] })
-            ],
+            layers: [baseGroup, overlayGroup],
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
         map.addControl(new ol.control.LayerSwitcher({ activationMode: 'click' }));
 
-        // VECTOR LOADING & STYLING
+        // 3. VECTOR DATA
         async function loadR2Layer(fileName, color, width, layerTitle) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             const source = new ol.source.Vector({
@@ -97,53 +104,45 @@
                     }
                 }
             });
-
             const vectorLayer = new ol.layer.Vector({
                 title: layerTitle,
                 source: source,
                 style: new ol.style.Style({
                     stroke: new ol.style.Stroke({ color: color, width: width }),
                     image: new ol.style.Circle({
-                        radius: 5,
-                        fill: new ol.style.Fill({ color: color }),
-                        stroke: new ol.style.Stroke({ color: '#fff', width: 1 })
+                        radius: 5, fill: new ol.style.Fill({ color: color }),
+                        stroke: new ol.style.Stroke({color: 'white', width: 1.5})
                     })
                 })
             });
-            map.getLayers().item(1).getLayers().push(vectorLayer);
+            overlayGroup.getLayers().push(vectorLayer);
         }
 
-        // LOAD YOUR DATA (Adjust colors/widths as needed)
+        // Vector Layers
         loadR2Layer('TD reach.fgb', '#1f78b4', 3, 'TD Reach');
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#33a02c', 2, 'Endorheic Streams');
-        loadR2Layer('TD watersheds exorheic streams.fgb', '#e31a1c', 2, 'Exorheic Streams');
-        loadR2Layer('pour points into the td.fgb', '#000', 1, 'Pour Points');
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#33a02c', 2.5, 'Endorheic Watersheds');
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#ff7f00', 2.5, 'Exorheic Watersheds');
+        loadR2Layer('points downstream of pp.fgb', '#e31a1c', 2, 'Downstream Points');
+        loadR2Layer('points upstream of pp.fgb', '#6a3d9a', 2, 'Upstream Points');
+        loadR2Layer('pour points into the td.fgb', '#000000', 2, 'Pour Points');
 
-        // ATTRIBUTE INTERACTION
+        // Click Handler
         map.on('singleclick', function(evt) {
-            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) {
-                return feat;
-            });
-
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
             if (feature) {
                 var props = feature.getProperties();
-                var tableHtml = '<table>';
-                // Loop through properties to build a table
+                var info = '<table>';
                 for (var key in props) {
-                    if (key !== 'geometry') { // Hide the geometry data
-                        tableHtml += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>';
+                    if (key !== 'geometry' && key !== 'id') { 
+                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
                     }
                 }
-                tableHtml += '</table>';
-                
-                content.innerHTML = tableHtml;
+                info += '</table>';
+                content.innerHTML = info;
                 overlay.setPosition(evt.coordinate);
-            } else {
-                overlay.setPosition(undefined);
-            }
+            } else { overlay.setPosition(undefined); }
         });
 
-        // Change cursor to pointer over features
         map.on('pointermove', function(e) {
             if (e.dragging) return;
             var pixel = map.getEventPixel(e.originalEvent);
