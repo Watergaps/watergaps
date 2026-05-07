@@ -132,4 +132,61 @@
         map.addControl(new ol.control.LayerSwitcher({ activationMode: 'click' }));
 
         async function loadR2Layer(fileName, color, width, layerTitle, zIndex = 0, radius = 5, strokeColor = 'white') {
-            const url = "https://pub-cd860c4a373e4093b459558baa5eb15
+            const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
+            const source = new ol.source.Vector({
+                loader: async function(extent, resolution, projection) {
+                    const response = await fetch(url);
+                    for await (const feature of flatgeobuf.deserialize(response.body, undefined)) {
+                        feature.getGeometry().transform('EPSG:4326', projection);
+                        this.addFeature(feature);
+                    }
+                }
+            });
+            const vectorLayer = new ol.layer.Vector({
+                title: layerTitle,
+                source: source,
+                zIndex: zIndex,
+                style: new ol.style.Style({
+                    stroke: new ol.style.Stroke({ color: color, width: width }),
+                    image: new ol.style.Circle({
+                        radius: radius,
+                        fill: new ol.style.Fill({ color: color }),
+                        stroke: new ol.style.Stroke({color: strokeColor, width: 1.5})
+                    })
+                })
+            });
+            overlayGroup.getLayers().push(vectorLayer);
+        }
+
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#ff7f00', 2.5, 'Endorheic Watersheds', 1);
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#0070ff', 2.5, 'Exorheic Watersheds', 2);
+        loadR2Layer('TD reach.fgb', '#ff0000', 3, 'TD Reach', 10);
+        loadR2Layer('points upstream of pp.fgb', '#ffffff', 2, 'Upstream Points', 20, 5, '#000000');
+        loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 2, 'Downstream Points', 20, 5);
+        loadR2Layer('pour points into the td.fgb', '#ff0000', 2, 'Pour Points', 30, 7.5);
+
+        map.on('singleclick', function(evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
+            if (feature) {
+                var props = feature.getProperties();
+                var info = '<table>';
+                for (var key in props) {
+                    if (key !== 'geometry' && key !== 'id') { 
+                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
+                    }
+                }
+                info += '</table>';
+                content.innerHTML = info;
+                overlay.setPosition(evt.coordinate);
+            } else { overlay.setPosition(undefined); }
+        });
+
+        map.on('pointermove', function(e) {
+            if (e.dragging) return;
+            var pixel = map.getEventPixel(e.originalEvent);
+            var hit = map.hasFeatureAtPixel(pixel);
+            map.getTargetElement().style.cursor = hit ? 'pointer' : '';
+        });
+        </script>
+    </body>
+</html>
