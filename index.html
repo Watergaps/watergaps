@@ -12,7 +12,6 @@
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
         <style>
             html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; }
-            /* Styling the attribute popup */
             .ol-popup {
                 position: absolute; background-color: white; padding: 15px; border-radius: 10px;
                 border: 1px solid #cccccc; bottom: 12px; left: -50px; min-width: 200px;
@@ -36,14 +35,13 @@
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
 
-        // 1. POPUP SETUP
         var container = document.getElementById('popup');
         var content = document.getElementById('popup-content');
         var closer = document.getElementById('popup-closer');
         var overlay = new ol.Overlay({ element: container, autoPan: true });
         closer.onclick = function() { overlay.setPosition(undefined); closer.blur(); return false; };
 
-        // 2. THE BACKGROUND STACK
+        // BASE LAYERS - OpenTopoMap is the primary base
         var openTopo = new ol.layer.Tile({
             title: 'OpenTopoMap',
             type: 'base',
@@ -51,10 +49,11 @@
             source: new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png' })
         });
 
+        // OVERLAY LAYERS - Mapzen Hillshade is an overlay on top of the base
         var mapzenTerrain = new ol.layer.Tile({
-            title: 'Mapzen Terrain (Overlay)',
+            title: 'Mapzen Terrain',
             visible: true,
-            opacity: 0.5, // 50% transparency just like your QGIS setup
+            opacity: 0.3, // Lower opacity makes it look more like a subtle hillshade
             source: new ol.source.XYZ({ 
                 url: 'https://s3.amazonaws.com/elevation-tiles-prod/hillshade/{z}/{x}/{y}.png' 
             })
@@ -63,12 +62,27 @@
         var map = new ol.Map({
             target: 'map',
             overlays: [overlay],
-            layers: [openTopo, mapzenTerrain],
+            layers: [
+                new ol.layer.Group({
+                    title: 'Base Maps',
+                    layers: [openTopo]
+                }),
+                new ol.layer.Group({
+                    title: 'Overlays',
+                    layers: [mapzenTerrain]
+                })
+            ],
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        // 3. VECTOR LOADING WITH ATTRIBUTES
-        async function loadR2Layer(fileName, color, width) {
+        // RE-ADDING THE LAYER SWITCHER
+        var layerSwitcher = new ol.control.LayerSwitcher({
+            activationMode: 'click',
+            tipLabel: 'Layers'
+        });
+        map.addControl(layerSwitcher);
+
+        async function loadR2Layer(fileName, color, width, layerTitle) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             const source = new ol.source.Vector({
                 loader: async function(extent, resolution, projection) {
@@ -80,6 +94,7 @@
                 }
             });
             const vectorLayer = new ol.layer.Vector({
+                title: layerTitle, // Adding titles so they show up in the switcher
                 source: source,
                 style: new ol.style.Style({
                     stroke: new ol.style.Stroke({ color: color, width: width }),
@@ -88,18 +103,16 @@
                     })
                 })
             });
-            map.addLayer(vectorLayer);
+            map.getLayers().item(1).getLayers().push(vectorLayer); // Adds vectors to the Overlays group
         }
 
-        // LOAD DATA WITH YOUR PREFERRED COLORS
-        loadR2Layer('TD reach.fgb', '#0000FF', 2); // Bright Blue
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#2E8B57', 1.5); // Sea Green
-        loadR2Layer('TD watersheds exorheic streams.fgb', '#D2691E', 1.5); // Chocolate Orange
-        loadR2Layer('points downstream of pp.fgb', '#FF0000', 1); // Red
-        loadR2Layer('points upstream of pp.fgb', '#800080', 1); // Purple
-        loadR2Layer('pour points into the td.fgb', '#000000', 1); // Black
+        loadR2Layer('TD reach.fgb', '#0000FF', 2, 'TD Reach');
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#2E8B57', 1.5, 'Endorheic Watersheds');
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#D2691E', 1.5, 'Exorheic Watersheds');
+        loadR2Layer('points downstream of pp.fgb', '#FF0000', 1, 'Downstream Points');
+        loadR2Layer('points upstream of pp.fgb', '#800080', 1, 'Upstream Points');
+        loadR2Layer('pour points into the td.fgb', '#000000', 1, 'Pour Points');
 
-        // 4. CLICK TO SEE ATTRIBUTES
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) { return feature; });
             if (feature) {
