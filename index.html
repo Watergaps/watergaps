@@ -135,4 +135,24 @@
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
         loadR2Layer('TD watersheds endorheic streams.fgb', '#d95f02', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
-        loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream
+        loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
+        loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
+        loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
+
+        map.on('singleclick', function(evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
+            if (feature) {
+                var props = feature.getProperties();
+                var info = '<table>';
+                for (var key in props) {
+                    if (key !== 'geometry' && key !== 'id') { 
+                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
+                    }
+                }
+                info += '</table>';
+                document.getElementById('popup-content').innerHTML = info;
+            }
+        });
+        </script>
+    </body>
+</html>
