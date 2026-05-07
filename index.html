@@ -10,16 +10,39 @@
         <script src="resources/ol-layerswitcher.js"></script>
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
         <style>
-            html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-            #info-panel {
-                position: absolute; top: 15px; left: 60px; z-index: 1000;
-                background: rgba(255, 255, 255, 0.95); padding: 18px;
-                border-radius: 6px; border: 1px solid #bbb; max-width: 320px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            html, body { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
+            
+            /* The New Header Bar */
+            #header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                height: 70px;
+                background-color: #ffffff;
+                border-bottom: 2px solid #e74c3c;
+                padding: 0 20px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                position: relative;
+                z-index: 1001;
             }
-            #info-panel h1 { margin: 0 0 8px 0; font-size: 20px; color: #2c3e50; border-bottom: 2px solid #e74c3c; padding-bottom: 5px; }
-            #info-panel p { margin: 0; font-size: 13px; line-height: 1.5; color: #444; }
-            #info-panel .disclaimer { margin-top: 10px; font-style: italic; font-size: 12px; color: #e67e22; border-top: 1px solid #eee; padding-top: 8px; }
+
+            #header h1 { margin: 0; font-size: 22px; color: #2c3e50; white-space: nowrap; }
+            
+            #abstract-area { text-align: right; max-width: 50%; }
+            #abstract-area p { margin: 0; font-size: 13px; color: #444; line-height: 1.3; }
+            #abstract-area .disclaimer { display: block; font-style: italic; font-size: 11px; color: #e67e22; margin-top: 3px; }
+
+            /* Map takes up the remaining space below header */
+            #map { 
+                position: absolute;
+                top: 72px; /* Starts exactly where header ends */
+                bottom: 0;
+                width: 100%;
+            }
+
+            /* Adjust controls to stay clear of header */
+            .ol-zoom { top: 15px; }
+            .layer-switcher { top: 15px; }
 
             .ol-popup {
                 position: absolute; background-color: white; padding: 15px; border-radius: 8px;
@@ -29,6 +52,7 @@
             .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none; }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; font-size: 18px; }
             .ol-popup-closer:after { content: "✖"; }
+            
             table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
             td { padding: 6px; border-bottom: 1px solid #eee; }
             tr:nth-child(even) { background: #f9f9f9; }
@@ -36,12 +60,16 @@
         <title>Global Transverse Drainages</title>
     </head>
     <body>
-        <div id="info-panel">
+        <div id="header">
             <h1>Global Transverse Drainages</h1>
-            <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
-            <p class="disclaimer">Note: This map is a work in progress and subject to change.</p>
+            <div id="abstract-area">
+                <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
+                <span class="disclaimer">Note: This map is a work in progress and subject to change.</span>
+            </div>
         </div>
+
         <div id="map"></div>
+
         <div id="popup" class="ol-popup">
             <a href="#" id="popup-closer" class="ol-popup-closer"></a>
             <div id="popup-content"></div>
@@ -65,7 +93,7 @@
 
         var openTopo = new ol.layer.Tile({
             title: 'OpenTopoMap',
-            visible: true, // Swapped to true so it opens automatically
+            visible: true,
             opacity: 0.7,
             source: new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', crossOrigin: 'anonymous' })
         });
@@ -109,24 +137,14 @@
             overlayGroup.getLayers().push(vectorLayer);
         }
 
-        // --- LAYER CONFIGURATION ---
-        
-        // Watersheds
+        // Layer Configuration
         loadR2Layer('TD watersheds endorheic streams.fgb', '#ff7f00', 2.5, 'Endorheic Watersheds', 1);
         loadR2Layer('TD watersheds exorheic streams.fgb', '#0070ff', 2.5, 'Exorheic Watersheds', 2);
-        
-        // TD Reach Line (Sitting on Top)
         loadR2Layer('TD reach.fgb', '#ff0000', 3, 'TD Reach', 10);
-        
-        // Upstream points with black outline
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 2, 'Upstream Points', 20, 5, '#000000');
-        
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 2, 'Downstream Points', 20, 5);
-        
-        // Pour Points (Red, 1.5x size)
         loadR2Layer('pour points into the td.fgb', '#ff0000', 2, 'Pour Points', 30, 7.5);
 
-        // Interaction
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
             if (feature) {
