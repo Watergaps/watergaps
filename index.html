@@ -82,8 +82,8 @@
 
         map.addControl(new ol.control.LayerSwitcher({ activationMode: 'click' }));
 
-        // IMPROVED STYLE FUNCTION
-        async function loadR2Layer(fileName, color, width, layerTitle, zIndex = 0, radius = 5) {
+        // MODIFIED STYLE FUNCTION with strokeColor parameter
+        async function loadR2Layer(fileName, color, width, layerTitle, zIndex = 0, radius = 5, strokeColor = 'white') {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             const source = new ol.source.Vector({
                 loader: async function(extent, resolution, projection) {
@@ -97,13 +97,13 @@
             const vectorLayer = new ol.layer.Vector({
                 title: layerTitle,
                 source: source,
-                zIndex: zIndex, // Controls which layer sits on top
+                zIndex: zIndex,
                 style: new ol.style.Style({
                     stroke: new ol.style.Stroke({ color: color, width: width }),
                     image: new ol.style.Circle({
-                        radius: radius, // Set radius for points
+                        radius: radius,
                         fill: new ol.style.Fill({ color: color }),
-                        stroke: new ol.style.Stroke({color: 'white', width: 1.5})
+                        stroke: new ol.style.Stroke({color: strokeColor, width: 1.5})
                     })
                 })
             });
@@ -116,17 +116,19 @@
         loadR2Layer('TD watersheds endorheic streams.fgb', '#ff7f00', 2.5, 'Endorheic Watersheds', 1);
         loadR2Layer('TD watersheds exorheic streams.fgb', '#0070ff', 2.5, 'Exorheic Watersheds', 2);
         
-        // TD Reach Line (Sitting on Top of watersheds)
+        // TD Reach Line (Sitting on Top)
         loadR2Layer('TD reach.fgb', '#ff0000', 3, 'TD Reach', 10);
         
-        // Points (Highest zIndex)
-        loadR2Layer('points upstream of pp.fgb', '#ffffff', 2, 'Upstream Points', 20, 5);
+        // Points
+        // White dots with black outline (#000000)
+        loadR2Layer('points upstream of pp.fgb', '#ffffff', 2, 'Upstream Points', 20, 5, '#000000');
+        
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 2, 'Downstream Points', 20, 5);
         
         // Pour Points (Red, 1.5x size)
         loadR2Layer('pour points into the td.fgb', '#ff0000', 2, 'Pour Points', 30, 7.5);
 
-        // Interaction Logic
+        // Interaction
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
             if (feature) {
