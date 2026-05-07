@@ -22,13 +22,20 @@
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
 
             #abstract-box { right: 12px; width: 250px; padding: 15px; }
-            #abstract-box p { margin: 0; font-size: 11px; color: #555; line-height: 1.5; }
+            #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.5; }
             #abstract-box .disclaimer { display: block; margin-top: 8px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 5px; }
 
             .ol-zoom { top: 70px !important; left: 12px !important; }
-            .layer-switcher { top: 125px !important; right: 12px !important; }
             
-            .layer-switcher .panel { border-radius: 2px !important; width: 260px !important; font-size: 11px !important; }
+            /* Layer Switcher - Expanded by default */
+            .layer-switcher { top: 115px !important; right: 12px !important; }
+            .layer-switcher .panel { 
+                border-radius: 2px !important; 
+                width: 260px !important; 
+                font-size: 11px !important; 
+                max-height: calc(100vh - 150px); /* Prevents it from going off-screen on small laptops */
+                overflow-y: auto; 
+            }
             .layer-switcher label { display: flex; align-items: center; padding: 3px 0; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
@@ -78,7 +85,11 @@
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        map.addControl(new ol.control.LayerSwitcher({ activationMode: 'click' }));
+        // MODIFIED: collapsed: false keeps the panel open on load
+        map.addControl(new ol.control.LayerSwitcher({ 
+            activationMode: 'click',
+            collapsed: false 
+        }));
 
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
@@ -120,43 +131,8 @@
             overlayGroup.getLayers().push(vectorLayer);
         }
 
-        // --- UPDATED LAYER CONFIGURATION ---
-        
-        // Exorheic: Blue (#1f78b4) - FIXED FILENAME (added plural 's')
+        // --- LAYER CONFIGURATION ---
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
-        
-        // Endorheic: Burnt Orange (#d95f02)
         loadR2Layer('TD watersheds endorheic streams.fgb', '#d95f02', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
-        
-        // TD Reach: Red (#e31a1c)
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
-        
-        // Upstream: White
-        loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
-        
-        // Downstream: Dark Purple (#6a3d9a)
-        loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
-        
-        // Pour Points: Red
-        loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
-
-        // Attribute Interaction
-        map.on('singleclick', function(evt) {
-            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
-            if (feature) {
-                var props = feature.getProperties();
-                var info = '<table>';
-                for (var key in props) {
-                    if (key !== 'geometry' && key !== 'id') { 
-                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
-                    }
-                }
-                info += '</table>';
-                document.getElementById('popup-content').innerHTML = info;
-                // Add simple overlay positioning if needed, or just console.log for now
-                console.log(props);
-            }
-        });
-        </script>
-    </body>
-</html>
+        loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream
