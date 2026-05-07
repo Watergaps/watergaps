@@ -10,17 +10,13 @@
         
         <script src="resources/ol.js"></script>
         <script src="resources/proj4.js"></script>
-        
+        <script src="resources/ol-layerswitcher.js"></script>
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
 
         <style>
-        html, body, #map { 
-            width: 100%; 
-            height: 100%; 
-            padding: 0; 
-            margin: 0; 
-            background-color: #ffffff; 
-        }
+        html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; background-color: #ffffff; }
+        /* Positioning the layer switcher button */
+        .layer-switcher { top: 0.5em; right: 0.5em; }
         </style>
         <title>Global transverse drainages (TDs)</title>
     </head>
@@ -28,15 +24,43 @@
         <div id="map"></div>
 
         <script>
-        // Set up the projection
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
         
-        // Initialize the Map
+        // 1. DEFINE BASE LAYERS
+        var openTopo = new ol.layer.Tile({
+            title: 'OpenTopoMap',
+            type: 'base',
+            visible: true,
+            source: new ol.source.XYZ({
+                url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                attributions: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
+            })
+        });
+
+        var mapzenTerrain = new ol.layer.Tile({
+            title: 'Mapzen Terrain',
+            type: 'base',
+            visible: false,
+            source: new ol.source.XYZ({
+                url: 'https://s3.amazonaws.com/elevation-tiles-prod/hillshade/{z}/{x}/{y}.png',
+                attributions: 'Terrain: Mapzen, AWS'
+            })
+        });
+
+        var osm = new ol.layer.Tile({
+            title: 'OSM Standard',
+            type: 'base',
+            visible: false,
+            source: new ol.source.OSM()
+        });
+
+        // 2. INITIALIZE MAP WITH BASE GROUPS
         var map = new ol.Map({
             target: 'map',
             layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
+                new ol.layer.Group({
+                    title: 'Base Maps',
+                    layers: [osm, mapzenTerrain, openTopo]
                 })
             ],
             view: new ol.View({
@@ -45,25 +69,26 @@
             })
         });
 
+        // Add the switcher tool to the map
+        var layerSwitcher = new ol.control.LayerSwitcher({
+            activationMode: 'click',
+            tipLabel: 'Layers',
+            groupSelectStyle: 'children'
+        });
+        map.addControl(layerSwitcher);
+
+        // 3. YOUR VECTOR LOADING FUNCTION (KEPT THE SAME)
         async function loadR2Layer(fileName, color) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
-            
-            console.log("Attempting to fetch: " + fileName);
-
             const source = new ol.source.Vector({
                 loader: async function(extent, resolution, projection) {
                     try {
                         const response = await fetch(url);
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        
                         for await (const feature of flatgeobuf.deserialize(response.body, undefined)) {
                             feature.getGeometry().transform('EPSG:4326', projection);
                             this.addFeature(feature);
                         }
-                        console.log("Successfully loaded: " + fileName);
-                    } catch (err) {
-                        console.error("CRITICAL ERROR loading " + fileName + ":", err);
-                    }
+                    } catch (err) { console.error("Error loading " + fileName, err); }
                 }
             });
 
@@ -77,11 +102,10 @@
                     })
                 })
             });
-
             map.addLayer(vectorLayer);
         }
 
-        // Load your 6 files with distinct colors
+        // Load your data
         loadR2Layer('TD reach.fgb', 'blue');
         loadR2Layer('TD watersheds endorheic streams.fgb', 'green');
         loadR2Layer('TD watersheds exorheic streams.fgb', 'orange');
