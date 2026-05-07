@@ -27,7 +27,7 @@
 
             .ol-zoom { top: 70px !important; left: 12px !important; }
             
-            /* Layer Switcher - FORCED OPEN */
+            /* FORCED OPEN LAYER BOX */
             .layer-switcher { top: 125px !important; right: 12px !important; }
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
@@ -35,9 +35,9 @@
                 font-size: 11px !important; 
                 max-height: calc(100vh - 180px);
                 overflow-y: auto; 
-                display: block !important; /* This forces it to stay visible */
+                display: block !important; 
             }
-            .layer-switcher button { display: none !important; } /* Hides the toggle button since it's always open */
+            .layer-switcher button { display: none !important; } 
             
             .layer-switcher label { display: flex; align-items: center; padding: 3px 0; cursor: pointer; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
@@ -46,7 +46,7 @@
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
-            /* Popup Styling */
+            /* Popup */
             .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
             .ol-popup-closer:after { content: "✖"; }
@@ -56,17 +56,13 @@
         <title>Global Transverse Drainages</title>
     </head>
     <body>
-        <div id="title-box" class="top-panel">
-            <h1>Global Transverse Drainages</h1>
-        </div>
-
+        <div id="title-box" class="top-panel"><h1>Global Transverse Drainages</h1></div>
         <div id="abstract-box" class="top-panel">
             <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
             <span class="disclaimer">Note: Work in progress / Subject to change.</span>
         </div>
 
         <div id="map"></div>
-
         <div id="popup" class="ol-popup">
             <a href="#" id="popup-closer" class="ol-popup-closer"></a>
             <div id="popup-content"></div>
@@ -75,22 +71,21 @@
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
 
-        // Popup setup
+        // Setup Popup
         var container = document.getElementById('popup');
         var content = document.getElementById('popup-content');
         var closer = document.getElementById('popup-closer');
         var overlay = new ol.Overlay({ element: container, autoPan: true });
         closer.onclick = function() { overlay.setPosition(undefined); return false; };
 
+        // Base Maps
         var esriTopo = new ol.layer.Tile({
             title: 'ESRI World Topo', type: 'base', visible: true,
             source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', crossOrigin: 'anonymous' })
         });
 
         var openTopo = new ol.layer.Tile({
-            title: 'OpenTopoMap',
-            visible: true,
-            opacity: 0.7,
+            title: 'OpenTopoMap', visible: true, opacity: 0.7,
             source: new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', crossOrigin: 'anonymous' })
         });
 
@@ -103,11 +98,6 @@
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        // Initialize and force show the LayerSwitcher
-        var layerSwitcher = new ol.control.LayerSwitcher({ activationMode: 'click', collapsed: false });
-        map.addControl(layerSwitcher);
-        layerSwitcher.showPanel();
-
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
                 var finalRadius = resolution > 10000 ? radius * 0.6 : radius;
@@ -115,27 +105,29 @@
                 return new ol.style.Style({
                     stroke: new ol.style.Stroke({ color: color, width: finalWidth }),
                     image: new ol.style.Circle({
-                        radius: finalRadius,
-                        fill: new ol.style.Fill({ color: color }),
+                        radius: finalRadius, fill: new ol.style.Fill({ color: color }),
                         stroke: new ol.style.Stroke({color: strokeColor, width: 1.2})
                     })
                 });
             };
         }
 
-        async function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
+        // IMPROVED: Synchronous Layer Creation (Fixes the Layer Box issue)
+        function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             let iconHtml = type === 'circle' 
                 ? `<span class="legend-icon legend-circle" style="background:${color}; border-color:${strokeColor}; width:${radius*1.6}px; height:${radius*1.6}px;"></span>`
                 : `<span class="legend-icon legend-line" style="background:${color}; height:${width}px;"></span>`;
 
             const source = new ol.source.Vector({
-                loader: async function(extent, resolution, projection) {
-                    const response = await fetch(url);
-                    for await (const feature of flatgeobuf.deserialize(response.body, undefined)) {
-                        feature.getGeometry().transform('EPSG:4326', projection);
-                        this.addFeature(feature);
-                    }
+                loader: function(extent, resolution, projection) {
+                    fetch(url).then(res => res.arrayBuffer()).then(async buf => {
+                        const iter = flatgeobuf.deserialize(new Uint8Array(buf));
+                        for await (const feature of iter) {
+                            feature.getGeometry().transform('EPSG:4326', projection);
+                            this.addFeature(feature);
+                        }
+                    });
                 }
             });
 
@@ -148,7 +140,7 @@
             overlayGroup.getLayers().push(vectorLayer);
         }
 
-        // --- LAYER CONFIGURATION ---
+        // --- LAYER CONFIGURATION (Colors Fixed) ---
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
         loadR2Layer('TD watersheds endorheic streams.fgb', '#d95f02', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
@@ -156,23 +148,25 @@
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
 
-        // Click interaction for Popups
+        // Initialize LayerSwitcher LAST
+        var ls = new ol.control.LayerSwitcher({ collapsed: false });
+        map.addControl(ls);
+        ls.showPanel();
+
+        // Interaction
         map.on('singleclick', function(evt) {
-            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
             if (feature) {
                 var props = feature.getProperties();
-                var info = '<table>';
+                var table = '<table>';
                 for (var key in props) {
                     if (key !== 'geometry' && key !== 'id') { 
-                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
+                        table += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
                     }
                 }
-                info += '</table>';
-                content.innerHTML = info;
-                overlay.setPosition(evt.coordinate); // THIS positions the box on the map!
-            } else {
-                overlay.setPosition(undefined);
-            }
+                content.innerHTML = table + '</table>';
+                overlay.setPosition(evt.coordinate);
+            } else { overlay.setPosition(undefined); }
         });
         </script>
     </body>
