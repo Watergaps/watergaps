@@ -27,23 +27,29 @@
 
             .ol-zoom { top: 70px !important; left: 12px !important; }
             
-            /* Layer Switcher - Expanded by default */
-            .layer-switcher { top: 115px !important; right: 12px !important; }
+            /* Layer Switcher - FORCED OPEN */
+            .layer-switcher { top: 125px !important; right: 12px !important; }
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
                 width: 260px !important; 
                 font-size: 11px !important; 
-                max-height: calc(100vh - 150px); /* Prevents it from going off-screen on small laptops */
+                max-height: calc(100vh - 180px);
                 overflow-y: auto; 
+                display: block !important; /* This forces it to stay visible */
             }
-            .layer-switcher label { display: flex; align-items: center; padding: 3px 0; }
+            .layer-switcher button { display: none !important; } /* Hides the toggle button since it's always open */
+            
+            .layer-switcher label { display: flex; align-items: center; padding: 3px 0; cursor: pointer; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
             .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
+            /* Popup Styling */
             .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
+            .ol-popup-closer:after { content: "✖"; }
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
             td { padding: 6px; border-bottom: 1px solid #eee; }
         </style>
@@ -60,10 +66,21 @@
         </div>
 
         <div id="map"></div>
-        <div id="popup" class="ol-popup"><div id="popup-content"></div></div>
+
+        <div id="popup" class="ol-popup">
+            <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+            <div id="popup-content"></div>
+        </div>
 
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
+
+        // Popup setup
+        var container = document.getElementById('popup');
+        var content = document.getElementById('popup-content');
+        var closer = document.getElementById('popup-closer');
+        var overlay = new ol.Overlay({ element: container, autoPan: true });
+        closer.onclick = function() { overlay.setPosition(undefined); return false; };
 
         var esriTopo = new ol.layer.Tile({
             title: 'ESRI World Topo', type: 'base', visible: true,
@@ -81,15 +98,15 @@
         
         var map = new ol.Map({
             target: 'map',
+            overlays: [overlay],
             layers: [new ol.layer.Group({title:'Base Maps', layers:[esriTopo]}), overlayGroup],
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        // MODIFIED: collapsed: false keeps the panel open on load
-        map.addControl(new ol.control.LayerSwitcher({ 
-            activationMode: 'click',
-            collapsed: false 
-        }));
+        // Initialize and force show the LayerSwitcher
+        var layerSwitcher = new ol.control.LayerSwitcher({ activationMode: 'click', collapsed: false });
+        map.addControl(layerSwitcher);
+        layerSwitcher.showPanel();
 
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
@@ -139,6 +156,7 @@
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
 
+        // Click interaction for Popups
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
             if (feature) {
@@ -150,7 +168,10 @@
                     }
                 }
                 info += '</table>';
-                document.getElementById('popup-content').innerHTML = info;
+                content.innerHTML = info;
+                overlay.setPosition(evt.coordinate); // THIS positions the box on the map!
+            } else {
+                overlay.setPosition(undefined);
             }
         });
         </script>
