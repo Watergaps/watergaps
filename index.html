@@ -63,7 +63,6 @@
             source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', crossOrigin: 'anonymous' })
         });
 
-        // OpenTopoMap added back as an overlay and set to VISIBLE
         var openTopo = new ol.layer.Tile({
             title: 'OpenTopoMap',
             visible: true,
@@ -121,13 +120,43 @@
             overlayGroup.getLayers().push(vectorLayer);
         }
 
-        // Configuration matching your professional critique
-        loadR2Layer('TD watershed exorheic streams.fgb', '#1f78b4', 2.0, 'TD watershed exorheic', 2, 0, '', 'line');
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#33a02c', 2.0, 'TD watershed endorheic', 1, 0, '', 'line');
+        // --- UPDATED LAYER CONFIGURATION ---
+        
+        // Exorheic: Blue (#1f78b4) - FIXED FILENAME (added plural 's')
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
+        
+        // Endorheic: Burnt Orange (#d95f02)
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#d95f02', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
+        
+        // TD Reach: Red (#e31a1c)
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
+        
+        // Upstream: White
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
-        loadR2Layer('points downstream of pp.fgb', '#ff7f00', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
+        
+        // Downstream: Dark Purple (#6a3d9a)
+        loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
+        
+        // Pour Points: Red
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
+
+        // Attribute Interaction
+        map.on('singleclick', function(evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
+            if (feature) {
+                var props = feature.getProperties();
+                var info = '<table>';
+                for (var key in props) {
+                    if (key !== 'geometry' && key !== 'id') { 
+                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
+                    }
+                }
+                info += '</table>';
+                document.getElementById('popup-content').innerHTML = info;
+                // Add simple overlay positioning if needed, or just console.log for now
+                console.log(props);
+            }
+        });
         </script>
     </body>
 </html>
