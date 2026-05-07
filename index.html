@@ -12,16 +12,12 @@
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
         <style>
             html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; }
-            /* Styling for the popup box */
             .ol-popup {
                 position: absolute; background-color: white; padding: 15px; border-radius: 10px;
                 border: 1px solid #cccccc; bottom: 12px; left: -50px; min-width: 250px;
                 box-shadow: 0 1px 4px rgba(0,0,0,0.2); font-family: sans-serif;
             }
-            .ol-popup:after, .ol-popup:before {
-                top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none;
-            }
-            .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; }
+            .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none; }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; font-size: 14px; color: #666; }
             .ol-popup-closer:after { content: "✖"; }
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -39,30 +35,38 @@
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
 
-        // POPUP ELEMENTS
         var container = document.getElementById('popup');
         var content = document.getElementById('popup-content');
         var closer = document.getElementById('popup-closer');
         var overlay = new ol.Overlay({ element: container, autoPan: true });
         closer.onclick = function() { overlay.setPosition(undefined); closer.blur(); return false; };
 
-        // 1. BASE MAP (Bottom)
-        var openTopo = new ol.layer.Tile({
-            title: 'OpenTopoMap',
+        // 1. PERMANENT BASE LAYER (Esri Topo)
+        var esriTopo = new ol.layer.Tile({
+            title: 'Esri World Topo',
             type: 'base',
             visible: true,
-            source: new ol.source.XYZ({ 
-                url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
-                crossOrigin: 'anonymous' // CRITICAL for external tiles
+            source: new ol.source.XYZ({
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+                attributions: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
             })
         });
 
-        // 2. TERRAIN OVERLAY (Middle)
-        // I used a more reliable Hillshade link here that stacks better
-        var mapzenTerrain = new ol.layer.Tile({
+        // 2. OVERLAY MAPS (OpenTopo and Mapzen)
+        var openTopoOverlay = new ol.layer.Tile({
+            title: 'OpenTopoMap',
+            visible: true,
+            opacity: 0.7, // 70% opacity so it blends with Esri
+            source: new ol.source.XYZ({ 
+                url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                crossOrigin: 'anonymous'
+            })
+        });
+
+        var mapzenOverlay = new ol.layer.Tile({
             title: 'Mapzen Terrain',
             visible: true,
-            opacity: 0.4, // Adjust this (0.1 to 1.0) to change the "strength" of the contours
+            opacity: 0.4, // Shading on top of everything
             source: new ol.source.XYZ({ 
                 url: 'https://s3.amazonaws.com/elevation-tiles-prod/hillshade/{z}/{x}/{y}.png',
                 crossOrigin: 'anonymous'
@@ -73,8 +77,8 @@
             target: 'map',
             overlays: [overlay],
             layers: [
-                new ol.layer.Group({ title: 'Base Maps', layers: [openTopo] }),
-                new ol.layer.Group({ title: 'Overlays', layers: [mapzenTerrain] })
+                new ol.layer.Group({ title: 'Base Maps', layers: [esriTopo] }),
+                new ol.layer.Group({ title: 'Overlays', layers: [openTopoOverlay, mapzenOverlay] })
             ],
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
@@ -82,7 +86,7 @@
         var layerSwitcher = new ol.control.LayerSwitcher({ activationMode: 'click' });
         map.addControl(layerSwitcher);
 
-        // 3. VECTOR LOADING (Top)
+        // 3. VECTOR LOADING (Top of the Stack)
         async function loadR2Layer(fileName, color, width, layerTitle) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             const source = new ol.source.Vector({
@@ -105,11 +109,10 @@
                     })
                 })
             });
-            // Adds vectors to the 'Overlays' group so they stay on top
+            // Push into the 'Overlays' group (Index 1)
             map.getLayers().item(1).getLayers().push(vectorLayer);
         }
 
-        // Add your layers (changed to bright colors for visibility)
         loadR2Layer('TD reach.fgb', '#0070ff', 3, 'TD Reach');
         loadR2Layer('TD watersheds endorheic streams.fgb', '#33a02c', 2, 'Endorheic Watersheds');
         loadR2Layer('TD watersheds exorheic streams.fgb', '#ff7f00', 2, 'Exorheic Watersheds');
@@ -117,14 +120,13 @@
         loadR2Layer('points upstream of pp.fgb', '#6a3d9a', 1, 'Upstream Points');
         loadR2Layer('pour points into the td.fgb', '#000000', 1, 'Pour Points');
 
-        // 4. CLICK HANDLER FOR ATTRIBUTES
+        // 4. CLICK HANDLER
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
             if (feature) {
                 var props = feature.getProperties();
                 var info = '<table>';
                 for (var key in props) {
-                    // Skip technical fields that aren't useful to users
                     if (key !== 'geometry' && key !== 'id') { 
                         info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
                     }
