@@ -10,67 +10,45 @@
         <script src="resources/ol-layerswitcher.js"></script>
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
         <style>
-            html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
+            html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; background-color: #f0f0f0; }
             
-            /* Floating Panels */
+            /* Professional Dashboard Panels */
             .top-panel {
                 position: absolute;
-                top: 10px;
+                top: 12px;
                 z-index: 1000;
-                background: rgba(255, 255, 255, 0.95);
-                padding: 10px 15px;
-                border-radius: 4px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                border: 1px solid #ddd;
+                background: rgba(255, 255, 255, 0.98);
+                padding: 12px 18px;
+                border-radius: 2px; /* Sharper corners look more professional */
+                box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+                border: 1px solid #ccc;
             }
 
-            /* Title Box */
-            #title-box { left: 10px; width: 260px; }
-            #title-box h1 { margin: 0; font-size: 18px; color: #2c3e50; line-height: 1.2; }
+            #title-box { left: 12px; width: 280px; }
+            #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
 
-            /* Abstract Box */
-            #abstract-box { right: 10px; width: 250px; }
-            #abstract-box p { margin: 0; font-size: 10.5px; color: #444; line-height: 1.3; }
-            #abstract-box .disclaimer { display: block; margin-top: 4px; font-style: italic; font-size: 9.5px; color: #d35400; }
+            #abstract-box { right: 12px; width: 250px; padding: 15px; }
+            #abstract-box p { margin: 0; font-size: 11px; color: #555; line-height: 1.5; }
+            #abstract-box .disclaimer { display: block; margin-top: 8px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 5px; }
 
-            /* UI Controls */
-            .ol-zoom { top: 65px !important; left: 10px !important; }
+            /* UI Controls Alignment */
+            .ol-zoom { top: 70px !important; left: 12px !important; }
+            .layer-switcher { top: 125px !important; right: 12px !important; }
             
-            /* Layer Switcher Styling */
-            .layer-switcher { top: 115px !important; right: 10px !important; }
-            .layer-switcher .panel { font-size: 11px !important; }
-            .layer-switcher label { font-size: 11px !important; display: flex; align-items: center; cursor: pointer; }
-            .layer-switcher .group label { font-size: 12px !important; font-weight: bold; margin-top: 5px; }
+            /* Layer Switcher Refinement */
+            .layer-switcher .panel { border-radius: 2px !important; width: 250px !important; font-size: 11px !important; }
+            .layer-switcher label { display: flex; align-items: center; padding: 3px 0; }
+            .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
-            /* Legend Icon CSS */
-            .legend-icon {
-                display: inline-block;
-                margin-right: 8px;
-                vertical-align: middle;
-            }
-            .legend-circle {
-                width: 10px; height: 10px;
-                border-radius: 50%;
-                border: 1.5px solid white;
-            }
-            .legend-line {
-                width: 15px; height: 3px;
-                border-radius: 1px;
-            }
+            /* Legend Icons */
+            .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
+            .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
+            .legend-line { width: 18px; border-radius: 1px; }
 
-            /* Attribute Popup */
-            .ol-popup {
-                position: absolute; background-color: white; padding: 15px; border-radius: 8px;
-                border: 1px solid #ccc; bottom: 12px; left: -50px; min-width: 280px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            }
-            .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none; }
-            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; font-size: 18px; }
-            .ol-popup-closer:after { content: "✖"; }
-            
-            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-            td { padding: 5px; border-bottom: 1px solid #eee; }
-            tr:nth-child(even) { background: #f9f9f9; }
+            /* Popup */
+            .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            td { padding: 6px; border-bottom: 1px solid #eee; }
         </style>
         <title>Global Transverse Drainages</title>
     </head>
@@ -81,62 +59,55 @@
 
         <div id="abstract-box" class="top-panel">
             <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
-            <span class="disclaimer">Note: This map is a work in progress and subject to change.</span>
+            <span class="disclaimer">Note: Work in progress / Subject to change.</span>
         </div>
 
         <div id="map"></div>
-
-        <div id="popup" class="ol-popup">
-            <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-            <div id="popup-content"></div>
-        </div>
+        <div id="popup" class="ol-popup"><div id="popup-content"></div></div>
 
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
 
-        var container = document.getElementById('popup');
-        var content = document.getElementById('popup-content');
-        var closer = document.getElementById('popup-closer');
-        var overlay = new ol.Overlay({ element: container, autoPan: true });
-        closer.onclick = function() { overlay.setPosition(undefined); return false; };
-
+        // Setup base map
         var esriTopo = new ol.layer.Tile({
-            title: 'Esri World Topo',
-            type: 'base',
-            visible: true,
+            title: 'ESRI Topo', type: 'base', visible: true,
             source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', crossOrigin: 'anonymous' })
         });
 
-        var openTopo = new ol.layer.Tile({
-            title: 'OpenTopoMap',
-            visible: true,
-            opacity: 0.7,
-            source: new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', crossOrigin: 'anonymous' })
-        });
-
-        var baseGroup = new ol.layer.Group({ title: 'Base Maps', layers: [esriTopo] });
-        var overlayGroup = new ol.layer.Group({ title: 'Overlays', layers: [openTopo] });
-
+        var overlayGroup = new ol.layer.Group({ title: 'Overlays', layers: [] });
         var map = new ol.Map({
             target: 'map',
-            overlays: [overlay],
-            layers: [baseGroup, overlayGroup],
+            layers: [new ol.layer.Group({title:'Base Maps', layers:[esriTopo]}), overlayGroup],
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
         map.addControl(new ol.control.LayerSwitcher({ activationMode: 'click' }));
 
-        // MODIFIED STYLE FUNCTION - Now creates HTML Icons for the legend
-        async function loadR2Layer(fileName, color, width, layerTitle, zIndex = 0, radius = 5, strokeColor = 'white', type = 'circle') {
+        // MODIFIED: Scale-aware style function
+        function getVectorStyle(color, width, radius, strokeColor, type) {
+            return function(feature, resolution) {
+                // If zoomed out far (resolution > 10000), make dots smaller
+                var finalRadius = resolution > 10000 ? radius * 0.5 : radius;
+                var finalWidth = resolution > 10000 ? width * 0.7 : width;
+
+                return new ol.style.Style({
+                    stroke: new ol.style.Stroke({ color: color, width: finalWidth }),
+                    image: new ol.style.Circle({
+                        radius: finalRadius,
+                        fill: new ol.style.Fill({ color: color }),
+                        stroke: new ol.style.Stroke({color: strokeColor, width: 1.2})
+                    })
+                });
+            };
+        }
+
+        async function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             
-            // Generate HTML icon based on type
-            let iconHtml = '';
-            if (type === 'circle') {
-                iconHtml = `<span class="legend-icon legend-circle" style="background-color: ${color}; border-color: ${strokeColor}; width: ${radius*1.8}px; height: ${radius*1.8}px;"></span>`;
-            } else {
-                iconHtml = `<span class="legend-icon legend-line" style="background-color: ${color}; height: ${width}px;"></span>`;
-            }
+            // Generate Legend HTML
+            let iconHtml = type === 'circle' 
+                ? `<span class="legend-icon legend-circle" style="background:${color}; border-color:${strokeColor}; width:${radius*1.8}px; height:${radius*1.8}px;"></span>`
+                : `<span class="legend-icon legend-line" style="background:${color}; height:${width}px;"></span>`;
 
             const source = new ol.source.Vector({
                 loader: async function(extent, resolution, projection) {
@@ -149,62 +120,21 @@
             });
 
             const vectorLayer = new ol.layer.Vector({
-                title: iconHtml + layerTitle, // Injecting the icon HTML into the title
+                title: iconHtml + layerTitle,
                 source: source,
                 zIndex: zIndex,
-                style: new ol.style.Style({
-                    stroke: new ol.style.Stroke({ color: color, width: width }),
-                    image: new ol.style.Circle({
-                        radius: radius,
-                        fill: new ol.style.Fill({ color: color }),
-                        stroke: new ol.style.Stroke({color: strokeColor, width: 1.5})
-                    })
-                })
+                style: getVectorStyle(color, width, radius, strokeColor, type)
             });
             overlayGroup.getLayers().push(vectorLayer);
         }
 
-        // --- UPDATED LAYER CONFIGURATION ---
-        
-        // Pour Points (Large Red Circle)
-        loadR2Layer('pour points into the td.fgb', '#ff0000', 2, 'Pour points (PP) into the TD', 30, 7, 'white', 'circle');
-        
-        // Downstream (Small Red/Purple Circle)
-        loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 2, 'Points downstream of PP', 20, 4.5, 'white', 'circle');
-        
-        // Upstream (White Circle, Black Stroke)
-        loadR2Layer('points upstream of pp.fgb', '#ffffff', 2, 'Points upstream of PP', 20, 4.5, '#000000', 'circle');
-        
-        // TD Reach (Red Line)
-        loadR2Layer('TD reach.fgb', '#ff0000', 3, 'TD reach', 10, 5, 'white', 'line');
-        
-        // Watersheds (Orange/Blue Lines)
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#ff7f00', 2.5, 'TD watershed endorheic streams', 1, 5, 'white', 'line');
-        loadR2Layer('TD watersheds exorheic streams.fgb', '#0070ff', 2.5, 'TD watershed exorheic streams', 2, 5, 'white', 'line');
-
-        // Interaction
-        map.on('singleclick', function(evt) {
-            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feat) { return feat; });
-            if (feature) {
-                var props = feature.getProperties();
-                var info = '<table>';
-                for (var key in props) {
-                    if (key !== 'geometry' && key !== 'id') { 
-                        info += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; 
-                    }
-                }
-                info += '</table>';
-                content.innerHTML = info;
-                overlay.setPosition(evt.coordinate);
-            } else { overlay.setPosition(undefined); }
-        });
-
-        map.on('pointermove', function(e) {
-            if (e.dragging) return;
-            var pixel = map.getEventPixel(e.originalEvent);
-            var hit = map.hasFeatureAtPixel(pixel);
-            map.getTargetElement().style.cursor = hit ? 'pointer' : '';
-        });
+        // --- LAYER CONFIG (Professional Palette) ---
+        loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
+        loadR2Layer('points downstream of pp.fgb', '#ff7f00', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
+        loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
+        loadR2Layer('TD reach.fgb', '#e31a1c', 2.5, 'TD reach', 10, 0, '', 'line');
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#33a02c', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
         </script>
     </body>
 </html>
