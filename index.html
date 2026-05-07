@@ -4,114 +4,118 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
-        
         <link rel="stylesheet" href="resources/ol.css">
         <link rel="stylesheet" href="resources/ol-layerswitcher.css">
-        
         <script src="resources/ol.js"></script>
         <script src="resources/proj4.js"></script>
         <script src="resources/ol-layerswitcher.js"></script>
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
-
         <style>
-        html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; background-color: #ffffff; }
-        /* Positioning the layer switcher button */
-        .layer-switcher { top: 0.5em; right: 0.5em; }
+            html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; }
+            /* Styling the attribute popup */
+            .ol-popup {
+                position: absolute; background-color: white; padding: 15px; border-radius: 10px;
+                border: 1px solid #cccccc; bottom: 12px; left: -50px; min-width: 200px;
+            }
+            .ol-popup:after, .ol-popup:before {
+                top: 100%; border: solid transparent; content: " "; height: 0; width: 0; position: absolute; pointer-events: none;
+            }
+            .ol-popup:after { border-top-color: white; border-width: 10px; left: 48px; margin-left: -10px; }
+            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; }
+            .ol-popup-closer:after { content: "✖"; }
         </style>
-        <title>Global transverse drainages (TDs)</title>
+        <title>Global TDs</title>
     </head>
     <body>
         <div id="map"></div>
+        <div id="popup" class="ol-popup">
+            <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+            <div id="popup-content"></div>
+        </div>
 
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
-        
-        // 1. DEFINE BASE LAYERS
+
+        // 1. POPUP SETUP
+        var container = document.getElementById('popup');
+        var content = document.getElementById('popup-content');
+        var closer = document.getElementById('popup-closer');
+        var overlay = new ol.Overlay({ element: container, autoPan: true });
+        closer.onclick = function() { overlay.setPosition(undefined); closer.blur(); return false; };
+
+        // 2. THE BACKGROUND STACK
         var openTopo = new ol.layer.Tile({
             title: 'OpenTopoMap',
             type: 'base',
             visible: true,
-            source: new ol.source.XYZ({
-                url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
-                attributions: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
-            })
+            source: new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png' })
         });
 
         var mapzenTerrain = new ol.layer.Tile({
-            title: 'Mapzen Terrain',
-            type: 'base',
-            visible: false,
-            source: new ol.source.XYZ({
-                url: 'https://s3.amazonaws.com/elevation-tiles-prod/hillshade/{z}/{x}/{y}.png',
-                attributions: 'Terrain: Mapzen, AWS'
+            title: 'Mapzen Terrain (Overlay)',
+            visible: true,
+            opacity: 0.5, // 50% transparency just like your QGIS setup
+            source: new ol.source.XYZ({ 
+                url: 'https://s3.amazonaws.com/elevation-tiles-prod/hillshade/{z}/{x}/{y}.png' 
             })
         });
 
-        var osm = new ol.layer.Tile({
-            title: 'OSM Standard',
-            type: 'base',
-            visible: false,
-            source: new ol.source.OSM()
-        });
-
-        // 2. INITIALIZE MAP WITH BASE GROUPS
         var map = new ol.Map({
             target: 'map',
-            layers: [
-                new ol.layer.Group({
-                    title: 'Base Maps',
-                    layers: [osm, mapzenTerrain, openTopo]
-                })
-            ],
-            view: new ol.View({
-                center: [0, 0],
-                zoom: 2
-            })
+            overlays: [overlay],
+            layers: [openTopo, mapzenTerrain],
+            view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        // Add the switcher tool to the map
-        var layerSwitcher = new ol.control.LayerSwitcher({
-            activationMode: 'click',
-            tipLabel: 'Layers',
-            groupSelectStyle: 'children'
-        });
-        map.addControl(layerSwitcher);
-
-        // 3. YOUR VECTOR LOADING FUNCTION (KEPT THE SAME)
-        async function loadR2Layer(fileName, color) {
+        // 3. VECTOR LOADING WITH ATTRIBUTES
+        async function loadR2Layer(fileName, color, width) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             const source = new ol.source.Vector({
                 loader: async function(extent, resolution, projection) {
-                    try {
-                        const response = await fetch(url);
-                        for await (const feature of flatgeobuf.deserialize(response.body, undefined)) {
-                            feature.getGeometry().transform('EPSG:4326', projection);
-                            this.addFeature(feature);
-                        }
-                    } catch (err) { console.error("Error loading " + fileName, err); }
+                    const response = await fetch(url);
+                    for await (const feature of flatgeobuf.deserialize(response.body, undefined)) {
+                        feature.getGeometry().transform('EPSG:4326', projection);
+                        this.addFeature(feature);
+                    }
                 }
             });
-
             const vectorLayer = new ol.layer.Vector({
                 source: source,
                 style: new ol.style.Style({
-                    stroke: new ol.style.Stroke({ color: color, width: 2 }),
+                    stroke: new ol.style.Stroke({ color: color, width: width }),
                     image: new ol.style.Circle({
-                        radius: 5,
-                        fill: new ol.style.Fill({ color: color })
+                        radius: 4, fill: new ol.style.Fill({ color: color })
                     })
                 })
             });
             map.addLayer(vectorLayer);
         }
 
-        // Load your data
-        loadR2Layer('TD reach.fgb', 'blue');
-        loadR2Layer('TD watersheds endorheic streams.fgb', 'green');
-        loadR2Layer('TD watersheds exorheic streams.fgb', 'orange');
-        loadR2Layer('points downstream of pp.fgb', 'red');
-        loadR2Layer('points upstream of pp.fgb', 'purple');
-        loadR2Layer('pour points into the td.fgb', 'black');
+        // LOAD DATA WITH YOUR PREFERRED COLORS
+        loadR2Layer('TD reach.fgb', '#0000FF', 2); // Bright Blue
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#2E8B57', 1.5); // Sea Green
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#D2691E', 1.5); // Chocolate Orange
+        loadR2Layer('points downstream of pp.fgb', '#FF0000', 1); // Red
+        loadR2Layer('points upstream of pp.fgb', '#800080', 1); // Purple
+        loadR2Layer('pour points into the td.fgb', '#000000', 1); // Black
+
+        // 4. CLICK TO SEE ATTRIBUTES
+        map.on('singleclick', function(evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) { return feature; });
+            if (feature) {
+                var coordinates = evt.coordinate;
+                var props = feature.getProperties();
+                var info = '<table>';
+                for (var key in props) {
+                    if (key !== 'geometry') { info += '<tr><td><b>' + key + ':</b></td><td>' + props[key] + '</td></tr>'; }
+                }
+                info += '</table>';
+                content.innerHTML = info;
+                overlay.setPosition(coordinates);
+            } else {
+                overlay.setPosition(undefined);
+            }
+        });
         </script>
     </body>
 </html>
