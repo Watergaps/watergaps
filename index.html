@@ -29,7 +29,7 @@
             /* UI Controls Positioning */
             .ol-zoom { top: 70px !important; left: 12px !important; }
             
-            /* Layer Switcher - Interactive Sidebar Look */
+            /* Layer Switcher - Correcting the "Ghosting" behavior */
             .layer-switcher { top: 125px !important; right: 12px !important; }
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
@@ -39,6 +39,14 @@
                 overflow-y: auto;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
+            
+            /* Ensure the toggle button (the arrows) is visible and clickable */
+            .layer-switcher button { 
+                width: 25px !important; 
+                height: 25px !important; 
+                background-color: rgba(255, 255, 255, 0.9) !important;
+            }
+
             .layer-switcher label { display: flex; align-items: center; padding: 3px 0; cursor: pointer; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
@@ -99,6 +107,17 @@
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
+        // --- IMPROVED LAYER SWITCHER LOGIC ---
+        var layerSwitcher = new ol.control.LayerSwitcher({ 
+            activationMode: 'click', // Fixes the "ghosting/disappearing" issue
+            collapsed: false,        // Starts the box open
+            tipLabel: 'Layers' 
+        });
+        map.addControl(layerSwitcher);
+        
+        // This ensures the panel is visible on load without breaking the toggle button
+        layerSwitcher.showPanel();
+
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
                 var finalRadius = resolution > 10000 ? radius * 0.6 : radius;
@@ -113,8 +132,7 @@
             };
         }
 
-        // Layer Loading Logic
-        function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
+        async function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             let iconHtml = type === 'circle' 
                 ? `<span class="legend-icon legend-circle" style="background:${color}; border-color:${strokeColor}; width:${radius*1.6}px; height:${radius*1.6}px;"></span>`
@@ -148,17 +166,6 @@
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
-
-        // INITIALIZE LAYER SWITCHER
-        // Set collapsed: false to start open, but don't force it via CSS
-        var layerSwitcher = new ol.control.LayerSwitcher({ 
-            collapsed: false,
-            tipLabel: 'Legend' 
-        });
-        map.addControl(layerSwitcher);
-        
-        // This ensures it opens on launch but allows the "little arrows" button to work
-        layerSwitcher.showPanel();
 
         // Click Interaction
         map.on('singleclick', function(evt) {
