@@ -22,19 +22,19 @@
             #title-box { left: 10px; width: 280px; }
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
 
-            /* Aligned to the same 'right' as the switcher */
+            /* Abstract Panel - Aligned to right sidebar */
             #abstract-box { right: 20px; width: 260px; padding: 12px; }
             #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
             #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
 
             .ol-zoom { top: 70px !important; left: 10px !important; }
             
-            /* Layer Switcher - Aesthetic Alignment */
+            /* Layer Switcher - Aesthetic Alignment with Abstract Box */
             .layer-switcher { top: 140px !important; right: 20px !important; z-index: 2000 !important; }
             
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
-                width: 260px !important; /* Exactly matches Abstract Box */
+                width: 260px !important; 
                 font-size: 11px !important; 
                 max-height: calc(100vh - 220px);
                 overflow-y: auto;
@@ -47,12 +47,11 @@
                 width: 38px !important; 
                 height: 38px !important; 
                 background-color: #e31a1c !important; /* Bright Red */
-                background-image: none !important; /* Remove default icon */
+                background-image: none !important; 
                 border: 2px solid #fff !important;
                 border-radius: 4px !important;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important;
             }
-            /* Add white "Layers" symbol (three stacked bars) */
             .layer-switcher button::after {
                 content: '≡';
                 color: white;
@@ -68,6 +67,7 @@
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
+            /* Attribute Popup */
             .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
             .ol-popup-closer:after { content: "✖"; }
@@ -117,10 +117,7 @@
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        var layerSwitcher = new ol.control.LayerSwitcher({ 
-            activationMode: 'click', 
-            collapsed: false 
-        });
+        var layerSwitcher = new ol.control.LayerSwitcher({ activationMode: 'click', collapsed: false });
         map.addControl(layerSwitcher);
 
         function getVectorStyle(color, width, radius, strokeColor) {
@@ -165,9 +162,16 @@
             layerSwitcher.renderPanel(); 
         }
 
+        // --- LAYER CONFIGURATION ---
+        // Exorheic: Blue
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#d95f02', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
+        
+        // Endorheic: Earth Brown (#845232) - This replaces the orange for better contrast with Red reach lines
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
+        
+        // TD Reach: Red
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
+        
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
