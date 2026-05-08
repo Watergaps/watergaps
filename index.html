@@ -12,50 +12,48 @@
         <style>
             html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; background-color: #f0f0f0; }
             
-            /* Professional Floating Panels */
             .top-panel {
-                position: absolute; top: 12px; z-index: 1000;
-                background: rgba(255, 255, 255, 0.98); padding: 12px 18px;
+                position: absolute; top: 10px; z-index: 1000;
+                background: rgba(255, 255, 255, 0.98); padding: 10px 15px;
                 border-radius: 2px; box-shadow: 0 1px 5px rgba(0,0,0,0.2); border: 1px solid #ccc;
             }
 
-            #title-box { left: 12px; width: 280px; }
+            #title-box { left: 10px; width: 280px; }
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
 
-            #abstract-box { right: 12px; width: 250px; padding: 15px; }
-            #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.5; }
-            #abstract-box .disclaimer { display: block; margin-top: 8px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 5px; }
+            #abstract-box { right: 10px; width: 250px; padding: 12px; }
+            #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
+            #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
 
-            /* UI Controls Positioning */
-            .ol-zoom { top: 70px !important; left: 12px !important; }
+            .ol-zoom { top: 70px !important; left: 10px !important; }
             
-            /* Layer Switcher - Correcting the "Ghosting" behavior */
-            .layer-switcher { top: 125px !important; right: 12px !important; }
+            /* Layer Switcher - Adjusted to prevent overlap */
+            .layer-switcher { top: 140px !important; right: 10px !important; z-index: 2000 !important; }
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
                 width: 260px !important; 
                 font-size: 11px !important; 
-                max-height: calc(100vh - 200px);
+                max-height: calc(100vh - 220px);
                 overflow-y: auto;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
             
-            /* Ensure the toggle button (the arrows) is visible and clickable */
+            /* Ensure the toggle arrows are prominent and above the abstract box */
             .layer-switcher button { 
-                width: 25px !important; 
-                height: 25px !important; 
-                background-color: rgba(255, 255, 255, 0.9) !important;
+                width: 28px !important; 
+                height: 28px !important; 
+                background-color: #fff !important;
+                border: 1px solid #ccc !important;
+                border-radius: 2px !important;
             }
 
             .layer-switcher label { display: flex; align-items: center; padding: 3px 0; cursor: pointer; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
-            /* Legend Icons */
             .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
-            /* Attribute Popup */
             .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
             .ol-popup-closer:after { content: "✖"; }
@@ -80,14 +78,12 @@
         <script>
         proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
 
-        // Setup Popup
         var container = document.getElementById('popup');
         var content = document.getElementById('popup-content');
         var closer = document.getElementById('popup-closer');
         var overlay = new ol.Overlay({ element: container, autoPan: true });
         closer.onclick = function() { overlay.setPosition(undefined); return false; };
 
-        // Base Maps
         var esriTopo = new ol.layer.Tile({
             title: 'ESRI World Topo', type: 'base', visible: true,
             source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', crossOrigin: 'anonymous' })
@@ -107,16 +103,12 @@
             view: new ol.View({ center: [0, 0], zoom: 3 })
         });
 
-        // --- IMPROVED LAYER SWITCHER LOGIC ---
+        // Initialize LayerSwitcher
         var layerSwitcher = new ol.control.LayerSwitcher({ 
-            activationMode: 'click', // Fixes the "ghosting/disappearing" issue
-            collapsed: false,        // Starts the box open
-            tipLabel: 'Layers' 
+            activationMode: 'click', 
+            collapsed: false 
         });
         map.addControl(layerSwitcher);
-        
-        // This ensures the panel is visible on load without breaking the toggle button
-        layerSwitcher.showPanel();
 
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
@@ -132,7 +124,7 @@
             };
         }
 
-        async function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
+        function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
             let iconHtml = type === 'circle' 
                 ? `<span class="legend-icon legend-circle" style="background:${color}; border-color:${strokeColor}; width:${radius*1.6}px; height:${radius*1.6}px;"></span>`
@@ -157,9 +149,12 @@
                 style: getVectorStyle(color, width, radius, strokeColor)
             });
             overlayGroup.getLayers().push(vectorLayer);
+            
+            // CRITICAL FIX: Tell the switcher to re-draw itself so the checkboxes appear
+            layerSwitcher.renderPanel(); 
         }
 
-        // --- LAYER CONFIGURATION ---
+        // Layer Configuration
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
         loadR2Layer('TD watersheds endorheic streams.fgb', '#d95f02', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
@@ -167,7 +162,9 @@
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 30, 6, 'white', 'circle');
 
-        // Click Interaction
+        // Force panel open on start
+        layerSwitcher.showPanel();
+
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
             if (feature) {
@@ -183,7 +180,6 @@
             } else { overlay.setPosition(undefined); }
         });
 
-        // Pointer move for hand cursor
         map.on('pointermove', function(e) {
             if (e.dragging) return;
             var pixel = map.getEventPixel(e.originalEvent);
