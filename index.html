@@ -29,9 +29,8 @@
 
             .ol-zoom { top: 70px !important; left: 10px !important; }
             
-            /* Layer Switcher - Aesthetic Alignment with Abstract Box */
+            /* Layer Switcher Styling */
             .layer-switcher { top: 140px !important; right: 20px !important; z-index: 2000 !important; }
-            
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
                 width: 260px !important; 
@@ -42,7 +41,7 @@
                 margin: 0 !important;
             }
             
-            /* Professional Charcoal Visibility Icon (≡) */
+            /* Charcoal Visibility Icon (≡) */
             .layer-switcher button { 
                 width: 38px !important; 
                 height: 38px !important; 
@@ -63,10 +62,12 @@
             .layer-switcher label { display: flex; align-items: center; padding: 3px 0; cursor: pointer; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
+            /* Legend Icons */
             .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
+            /* Attribute Popup */
             .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
             .ol-popup-closer:after { content: "✖"; }
@@ -134,7 +135,7 @@
         }
 
         function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
-            // CACHE BUSTER: The Date.now() addition ensures the browser sees a "new" file every refresh.
+            // CACHE BUSTER: "?v=" + Date.now() forces a fresh download every single time
             const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName) + "?v=" + Date.now();
             
             let iconHtml = type === 'circle' 
@@ -165,7 +166,7 @@
 
         // --- LAYER CONFIGURATION ---
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line'); // Earth Brown
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
