@@ -22,19 +22,19 @@
             #title-box { left: 10px; width: 280px; }
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
 
-            /* Abstract Panel - Flush with the Layers Panel below it */
+            /* Aligned Sidebar Panels (260px wide) */
             #abstract-box { right: 20px; width: 260px; padding: 12px; }
             #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
             #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
 
             .ol-zoom { top: 70px !important; left: 10px !important; }
             
-            /* Layer Switcher - Aesthetic Alignment */
+            /* Layer Switcher - Aesthetic Alignment with Abstract Box */
             .layer-switcher { top: 140px !important; right: 20px !important; z-index: 2000 !important; }
             
             .layer-switcher .panel { 
                 border-radius: 2px !important; 
-                width: 260px !important; /* Aligned with Abstract box */
+                width: 260px !important; 
                 font-size: 11px !important; 
                 max-height: calc(100vh - 220px);
                 overflow-y: auto;
@@ -46,7 +46,7 @@
             .layer-switcher button { 
                 width: 38px !important; 
                 height: 38px !important; 
-                background-color: #444444 !important; /* Modern Charcoal Grey */
+                background-color: #444444 !important; 
                 background-image: none !important; 
                 border: 2px solid #fff !important;
                 border-radius: 4px !important;
@@ -63,12 +63,10 @@
             .layer-switcher label { display: flex; align-items: center; padding: 3px 0; cursor: pointer; }
             .layer-switcher .group label { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
 
-            /* Legend Icons */
             .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
-            /* Attribute Popup */
             .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
             .ol-popup-closer:after { content: "✖"; }
@@ -136,7 +134,9 @@
         }
 
         function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
-            const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName);
+            // CACHE BUSTER: The Date.now() addition ensures the browser sees a "new" file every refresh.
+            const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + encodeURIComponent(fileName) + "?v=" + Date.now();
+            
             let iconHtml = type === 'circle' 
                 ? `<span class="legend-icon legend-circle" style="background:${color}; border-color:${strokeColor}; width:${radius*1.6}px; height:${radius*1.6}px;"></span>`
                 : `<span class="legend-icon legend-line" style="background:${color}; height:${width}px;"></span>`;
@@ -165,7 +165,7 @@
 
         // --- LAYER CONFIGURATION ---
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
-        loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line'); // Earth Brown
         loadR2Layer('TD reach.fgb', '#e31a1c', 2.8, 'TD reach', 10, 0, '', 'line');
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 20, 3.5, '#333', 'circle');
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 20, 3.5, 'white', 'circle');
