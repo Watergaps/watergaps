@@ -11,13 +11,18 @@
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
         <style>
             html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; background-color: #f0f0f0; }
+            
+            /* UI Panels */
             .top-panel { position: absolute; top: 10px; z-index: 1000; background: rgba(255, 255, 255, 0.98); padding: 10px 15px; border-radius: 2px; box-shadow: 0 1px 5px rgba(0,0,0,0.2); border: 1px solid #ccc; }
             #title-box { left: 10px; width: 280px; }
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
             #abstract-box { right: 20px; width: 260px; padding: 12px; }
             #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
             #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
+            
             .ol-zoom { top: 70px !important; left: 10px !important; }
+            
+            /* Layer Switcher Styling */
             .layer-switcher { top: 140px !important; right: 20px !important; z-index: 2000 !important; }
             .layer-switcher .panel { border-radius: 2px !important; width: 260px !important; font-size: 11px !important; max-height: calc(100vh - 220px); overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 !important; }
             .layer-switcher button { width: 38px !important; height: 38px !important; background-color: #444444 !important; background-image: none !important; border: 2px solid #fff !important; border-radius: 4px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
@@ -25,11 +30,41 @@
             .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
-            .ol-popup { position: absolute; background: white; padding: 15px; border-radius: 2px; border: 1px solid #ccc; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; }
+
+            /* Optimized Compact Popup */
+            .ol-popup { 
+                position: absolute; 
+                background: white; 
+                padding: 10px; 
+                border-radius: 4px; 
+                border: 1px solid #ccc; 
+                min-width: 220px; 
+                max-width: 400px;
+                max-height: 450px; /* Prevents extending beyond screen */
+                overflow-y: auto;   /* Adds scrollbar if list is long */
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+            }
+            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; font-size: 16px; }
             .ol-popup-closer:after { content: "✖"; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            td { padding: 6px; border-bottom: 1px solid #eee; }
+
+            /* Ultra-Condensed Table Styling */
+            #popup-content table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            #popup-content td { 
+                padding: 2px 8px; /* Tight vertical spacing */
+                border-bottom: 1px solid #f0f0f0; 
+                vertical-align: top;
+            }
+            #popup-content td:first-child { 
+                font-weight: bold; 
+                color: #666; 
+                white-space: nowrap; /* Labels won't wrap */
+                padding-right: 15px;
+            }
+            #popup-content td:last-child { 
+                color: #111; 
+                white-space: nowrap; /* Values won't wrap/insert returns */
+                text-align: right; 
+            }
         </style>
         <title>Global Transverse Drainages</title>
     </head>
@@ -79,23 +114,30 @@
             ls.renderPanel(); 
         }
 
-        // --- LAYER STACK (Higher zIndex = Top of Map) ---
+        // --- LAYER CONFIG ---
         loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
         loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
-        loadR2Layer('TD reach.fgb', '#e31a1c', 3.0, 'TD reach', 100, 0, '', 'line'); // Reach now at zIndex 100
+        loadR2Layer('TD reach.fgb', '#e31a1c', 3.0, 'TD reach', 100, 0, '', 'line');
         loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 110, 3.5, '#333', 'circle');
         loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 120, 3.5, 'white', 'circle');
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 130, 6, 'white', 'circle');
 
         ls.showPanel();
+        
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
             if (feature) {
                 var props = feature.getProperties(), table = '<table>';
-                for (var key in props) { if (key !== 'geometry' && key !== 'id') { table += '<tr><td><b>' + key + '</b></td><td>' + props[key] + '</td></tr>'; } }
-                content.innerHTML = table + '</table>'; overlay.setPosition(evt.coordinate);
+                for (var key in props) { 
+                    if (key !== 'geometry' && key !== 'id') { 
+                        table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
+                    } 
+                }
+                content.innerHTML = table + '</table>'; 
+                overlay.setPosition(evt.coordinate);
             } else { overlay.setPosition(undefined); }
         });
+
         map.on('pointermove', function(e) { if (e.dragging) return; var pixel = map.getEventPixel(e.originalEvent); var hit = map.hasFeatureAtPixel(pixel); map.getTargetElement().style.cursor = hit ? 'pointer' : ''; });
         </script>
     </body>
