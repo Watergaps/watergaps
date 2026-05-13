@@ -10,7 +10,7 @@
         <script src="resources/ol-layerswitcher.js"></script>
         <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
         <style>
-            html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; background-color: #f0f0f0; }
+            html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: #f0f0f0; }
             
             /* UI Panels */
             .top-panel { position: absolute; top: 10px; z-index: 1000; background: rgba(255, 255, 255, 0.98); padding: 10px 15px; border-radius: 2px; box-shadow: 0 1px 5px rgba(0,0,0,0.2); border: 1px solid #ccc; }
@@ -31,40 +31,42 @@
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
-            /* Optimized Compact Popup */
+            /* Professional Compact Popup */
             .ol-popup { 
                 position: absolute; 
                 background: white; 
-                padding: 10px; 
+                padding: 12px; 
                 border-radius: 4px; 
-                border: 1px solid #ccc; 
-                min-width: 220px; 
-                max-width: 400px;
-                max-height: 450px; /* Prevents extending beyond screen */
-                overflow-y: auto;   /* Adds scrollbar if list is long */
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+                border: 1px solid #bbb; 
+                width: 280px; 
+                max-height: 400px;
+                overflow-y: auto;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
             }
-            .ol-popup-closer { text-decoration: none; position: absolute; top: 2px; right: 8px; color: #999; font-size: 16px; }
+            .ol-popup-closer { text-decoration: none; position: absolute; top: 4px; right: 8px; color: #888; font-size: 14px; }
             .ol-popup-closer:after { content: "✖"; }
 
-            /* Ultra-Condensed Table Styling */
-            #popup-content table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            /* Compact Table - No White Space Gaps */
+            #popup-content table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
             #popup-content td { 
-                padding: 2px 8px; /* Tight vertical spacing */
-                border-bottom: 1px solid #f0f0f0; 
+                padding: 4px 0; 
+                border-bottom: 1px solid #f2f2f2; 
                 vertical-align: top;
+                word-wrap: break-word; /* Allows long IDs to wrap naturally */
+                overflow-wrap: break-word;
             }
             #popup-content td:first-child { 
+                width: 110px; /* Fixed width for labels keeps them readable */
                 font-weight: bold; 
                 color: #666; 
-                white-space: nowrap; /* Labels won't wrap */
-                padding-right: 15px;
+                padding-right: 8px;
             }
             #popup-content td:last-child { 
-                color: #111; 
-                white-space: nowrap; /* Values won't wrap/insert returns */
-                text-align: right; 
+                color: #000; 
+                text-align: left; /* Value sits right next to the label */
             }
+            /* Zebra striping to help the eye track across rows */
+            #popup-content tr:nth-child(even) { background-color: #fafafa; }
         </style>
         <title>Global Transverse Drainages</title>
     </head>
