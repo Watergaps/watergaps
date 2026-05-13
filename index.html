@@ -12,51 +12,36 @@
         <style>
             html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: #f0f0f0; }
             
-            /* UI Panels */
+            /* General Panel Style */
             .top-panel { position: absolute; top: 10px; z-index: 1000; background: rgba(255, 255, 255, 0.98); padding: 10px 15px; border-radius: 2px; box-shadow: 0 1px 5px rgba(0,0,0,0.2); border: 1px solid #ccc; }
+            
+            /* Left side: Title & Zoom */
             #title-box { left: 10px; width: 280px; }
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
-            
-            /* Zoom Controls */
             .ol-zoom { top: 70px !important; left: 10px !important; }
 
-            /* Right Sidebar Column */
+            /* Right side: Sidebar Column */
             #abstract-box { right: 20px; width: 260px; padding: 12px; }
             #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
             #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
             
             #search-container {
                 position: absolute;
-                top: 115px; /* Added spacing from Abstract Box */
+                top: 115px; 
                 right: 20px;
                 z-index: 1000;
                 display: flex;
                 background: white;
                 border: 1px solid #ccc;
                 border-radius: 2px;
-                width: 286px; /* Matches total width of abstract box */
+                width: 286px; 
                 overflow: hidden;
                 box-shadow: 0 1px 5px rgba(0,0,0,0.1);
             }
-            #search-input {
-                border: none;
-                padding: 8px 12px;
-                font-size: 12px;
-                flex-grow: 1;
-                outline: none;
-            }
-            #search-btn {
-                background: #444;
-                color: white;
-                border: none;
-                padding: 0 15px;
-                cursor: pointer;
-                font-size: 14px;
-                transition: background 0.2s;
-            }
+            #search-input { border: none; padding: 8px 12px; font-size: 12px; flex-grow: 1; outline: none; }
+            #search-btn { background: #444; color: white; border: none; padding: 0 15px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
             #search-btn:hover { background: #222; }
 
-            /* Layer Switcher */
             .layer-switcher { top: 160px !important; right: 20px !important; z-index: 2000 !important; }
             .layer-switcher .panel { border-radius: 2px !important; width: 260px !important; font-size: 11px !important; max-height: calc(100vh - 250px); overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 !important; }
             .layer-switcher button { width: 38px !important; height: 38px !important; background-color: #444444 !important; background-image: none !important; border: 2px solid #fff !important; border-radius: 4px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
@@ -67,7 +52,7 @@
             .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
             .legend-line { width: 18px; border-radius: 1px; }
 
-            /* Attributes Popup */
+            /* Attribute Popup */
             .ol-popup { position: absolute; background: white; padding: 12px; border-radius: 4px; border: 1px solid #bbb; width: 280px; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
             .ol-popup-closer { text-decoration: none; position: absolute; top: 4px; right: 8px; color: #888; font-size: 14px; }
             .ol-popup-closer:after { content: "✖"; }
@@ -87,10 +72,7 @@
             <span class="disclaimer">Note: Work in progress / Subject to change.</span>
         </div>
 
-        <div id="search-container">
-            <input type="text" id="search-input" placeholder="Search for a location...">
-            <button id="search-btn">🔍</button>
-        </div>
+        <div id="search-container"><input type="text" id="search-input" placeholder="Search..."><button id="search-btn">🔍</button></div>
 
         <div id="map"></div>
         <div id="popup" class="ol-popup"><a href="#" id="popup-closer" class="ol-popup-closer"></a><div id="popup-content"></div></div>
@@ -109,20 +91,19 @@
         var ls = new ol.control.LayerSwitcher({ activationMode: 'click', collapsed: false });
         map.addControl(ls);
 
-        // Search Implementation
+        // Search Logic
         document.getElementById('search-btn').onclick = function() {
-            var query = document.getElementById('search-input').value;
-            if (query.length < 3) return;
-            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + query)
-                .then(response => response.json())
-                .then(data => {
+            var q = document.getElementById('search-input').value;
+            if (q.length < 3) return;
+            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + q)
+                .then(r => r.json()).then(data => {
                     if (data.length > 0) {
                         var coord = ol.proj.fromLonLat([parseFloat(data[0].lon), parseFloat(data[0].lat)]);
                         map.getView().animate({ center: coord, zoom: 10, duration: 2000 });
                     } else { alert("Location not found."); }
                 });
         };
-        document.getElementById('search-input').addEventListener("keypress", function(e) { if (e.key === "Enter") { document.getElementById('search-btn').click(); } });
+        document.getElementById('search-input').onkeypress = (e) => { if (e.key === "Enter") document.getElementById('search-btn').click(); };
 
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
@@ -157,11 +138,16 @@
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
             if (feature) {
                 var props = feature.getProperties(), table = '<table>';
-                for (var key in props) { if (key !== 'geometry' && key !== 'id') { table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; } }
+                for (var key in props) { 
+                    if (key !== 'geometry' && key !== 'id') { 
+                        // Raw keys (e.g. MAIN_RIV) displayed directly
+                        table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
+                    } 
+                }
                 content.innerHTML = table + '</table>'; overlay.setPosition(evt.coordinate);
             } else { overlay.setPosition(undefined); }
         });
-        map.on('pointermove', function(e) { if (e.dragging) return; var pixel = map.getEventPixel(e.originalEvent); var hit = map.hasFeatureAtPixel(pixel); map.getTargetElement().style.cursor = hit ? 'pointer' : ''; });
+        map.on('pointermove', function(e) { if (e.dragging) return; var hit = map.hasFeatureAtPixel(map.getEventPixel(e.originalEvent)); map.getTargetElement().style.cursor = hit ? 'pointer' : ''; });
         </script>
     </body>
 </html>
