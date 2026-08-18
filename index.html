@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <link rel="stylesheet" href="resources/ol.css">
+        <link rel="stylesheet" href="resources/ol-layerswitcher.css">
+        <script src="resources/ol.js"></script>
+        <script src="resources/proj4.js"></script>
+        <script src="resources/ol-layerswitcher.js"></script>
+        <script src="https://unpkg.com/flatgeobuf@3.24.0/dist/flatgeobuf-ol.min.js"></script>
+        <style>
+            html, body, #map { height: 100%; width: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: #f0f0f0; }
+            
+            /* General Panel Style */
+            .top-panel { position: absolute; top: 10px; z-index: 1000; background: rgba(255, 255, 255, 0.98); padding: 10px 15px; border-radius: 2px; box-shadow: 0 1px 5px rgba(0,0,0,0.2); border: 1px solid #ccc; }
+            
+            /* Left side: Title & Zoom */
+            #title-box { left: 10px; width: 280px; }
+            #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
+            .ol-zoom { top: 105px !important; left: 10px !important; }
+
+            /* Right side: Sidebar Column */
+            #abstract-box { right: 20px; width: 260px; padding: 12px; }
+            #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
+            #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
+            
+            #search-container {
+                position: absolute;
+                top: 115px; 
+                right: 20px;
+                z-index: 1000;
+                display: flex;
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 2px;
+                width: 286px; 
+                overflow: hidden;
+                box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            }
+            #search-input { border: none; padding: 8px 12px; font-size: 12px; flex-grow: 1; outline: none; }
+            #search-btn { background: #444; color: white; border: none; padding: 0 15px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+            #search-btn:hover { background: #222; }
+
+            .layer-switcher { top: 160px !important; right: 20px !important; z-index: 2000 !important; }
+            .layer-switcher .panel { border-radius: 2px !important; width: 260px !important; font-size: 11px !important; max-height: calc(100vh - 250px); overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 !important; }
+            .layer-switcher button { width: 38px !important; height: 38px !important; background-color: #444444 !important; background-image: none !important; border: 2px solid #fff !important; border-radius: 4px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; }
+            .layer-switcher button::after { content: '≡'; color: white; font-size: 28px; font-weight: bold; line-height: 32px; }
+
+            /* Legend Icons */
+            .legend-icon { display: inline-block; margin-right: 10px; vertical-align: middle; }
+            .legend-circle { border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
+            .legend-line { width: 18px; border-radius: 1px; }
+
+            /* Attribute Popup */
+            .ol-popup { position: absolute; background: white; padding: 12px; border-radius: 4px; border: 1px solid #bbb; width: 280px; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+            .ol-popup-closer { text-decoration: none; position: absolute; top: 4px; right: 8px; color: #888; font-size: 14px; }
+            .ol-popup-closer:after { content: "✖"; }
+            #popup-content table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+            #popup-content td { padding: 4px 0; border-bottom: 1px solid #f2f2f2; vertical-align: top; word-wrap: break-word; }
+            #popup-content td:first-child { width: 110px; font-weight: bold; color: #666; padding-right: 8px; }
+            #popup-content td:last-child { color: #000; text-align: left; }
+            #popup-content tr:nth-child(even) { background-color: #fafafa; }
+        </style>
+        <title>Global Transverse Drainages</title>
+    </head>
+    <body>
+        <div id="title-box" class="top-panel">
+            <h1>Global Transverse Drainages</h1>
+            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; color: #555; font-weight: 600;">Data Repository:</span>
+                <a href="https://doi.org/10.5281/zenodo.21988479" target="_blank" rel="noopener noreferrer" style="display: inline-flex; vertical-align: middle;">
+                    <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21988479.svg" alt="DOI: 10.5281/zenodo.21988479" style="height: 18px;">
+                </a>
+            </div>
+        </div>
+        
+        <div id="abstract-box" class="top-panel">
+            <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
+            <span class="disclaimer">Note: Work in progress / Subject to change.</span>
+        </div>
+
+        <div id="search-container"><input type="text" id="search-input" placeholder="Search..."><button id="search-btn">🔍</button></div>
+
+        <div id="map"></div>
+        <div id="popup" class="ol-popup"><a href="#" id="popup-closer" class="ol-popup-closer"></a><div id="popup-content"></div></div>
+
+        <script>
+        proj4.defs('EPSG:3857','+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
+        var container = document.getElementById('popup'), content = document.getElementById('popup-content'), closer = document.getElementById('popup-closer');
+        var overlay = new ol.Overlay({ element: container, autoPan: true });
+        closer.onclick = function() { overlay.setPosition(undefined); return false; };
+
+        var esriTopo = new ol.layer.Tile({ title: 'ESRI World Topo', type: 'base', visible: true, source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', crossOrigin: 'anonymous' }) });
+        var openTopo = new ol.layer.Tile({ title: 'OpenTopoMap', visible: true, opacity: 0.7, source: new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', crossOrigin: 'anonymous' }) });
+        var overlayGroup = new ol.layer.Group({ title: 'Overlays', layers: [openTopo] });
+        var map = new ol.Map({ target: 'map', overlays: [overlay], layers: [new ol.layer.Group({title:'Base Maps', layers:[esriTopo]}), overlayGroup], view: new ol.View({ center: [0, 0], zoom: 3 }) });
+
+        var ls = new ol.control.LayerSwitcher({ activationMode: 'click', collapsed: false });
+        map.addControl(ls);
+
+        // Search Logic
+        document.getElementById('search-btn').onclick = function() {
+            var q = document.getElementById('search-input').value;
+            if (q.length < 3) return;
+            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + q)
+                .then(r => r.json()).then(data => {
+                    if (data.length > 0) {
+                        var coord = ol.proj.fromLonLat([parseFloat(data[0].lon), parseFloat(data[0].lat)]);
+                        map.getView().animate({ center: coord, zoom: 10, duration: 2000 });
+                    } else { alert("Location not found."); }
+                });
+        };
+        document.getElementById('search-input').onkeypress = (e) => { if (e.key === "Enter") document.getElementById('search-btn').click(); };
+
+        function getVectorStyle(color, width, radius, strokeColor) {
+            return function(feature, resolution) {
+                var finalRadius = resolution > 10000 ? radius * 0.6 : radius, finalWidth = resolution > 10000 ? width * 0.8 : width;
+                return new ol.style.Style({ stroke: new ol.style.Stroke({ color: color, width: finalWidth }), image: new ol.style.Circle({ radius: finalRadius, fill: new ol.style.Fill({ color: color }), stroke: new ol.style.Stroke({color: strokeColor, width: 1.2}) }) });
+            };
+        }
+
+        function loadR2Layer(fileName, color, width, layerTitle, zIndex, radius, strokeColor, type) {
+            const url = "https://pub-cd860c4a373e4093b459558baa5eb15f.r2.dev/" + fileName.replace(/ /g, "%20") + "?v=" + Date.now();
+            let iconHtml = type === 'circle' ? `<span class="legend-icon legend-circle" style="background:${color}; border-color:${strokeColor}; width:${radius*1.6}px; height:${radius*1.6}px;"></span>` : `<span class="legend-icon legend-line" style="background:${color}; height:${width}px;"></span>`;
+            const source = new ol.source.Vector({ loader: function(extent, resolution, projection) { 
+                fetch(url).then(res => res.arrayBuffer()).then(async buf => { 
+                    const iter = flatgeobuf.deserialize(new Uint8Array(buf)); 
+                    for await (const f of iter) { f.getGeometry().transform('EPSG:4326', projection); this.addFeature(f); } 
+                }); 
+            } });
+            const layer = new ol.layer.Vector({ title: iconHtml + layerTitle, source: source, zIndex: zIndex, style: getVectorStyle(color, width, radius, strokeColor) });
+            overlayGroup.getLayers().push(layer);
+            ls.renderPanel(); 
+        }
+
+        loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
+        loadR2Layer('TD watersheds exorheic streams.fgb', '#1f78b4', 1.8, 'TD watershed exorheic', 2, 0, '', 'line');
+        loadR2Layer('TD reach.fgb', '#e31a1c', 3.0, 'TD reach', 100, 0, '', 'line');
+        loadR2Layer('points upstream of pp.fgb', '#ffffff', 1, 'Points upstream of PP', 110, 3.5, '#333', 'circle');
+        loadR2Layer('points downstream of pp.fgb', '#6a3d9a', 1, 'Points downstream of PP', 120, 3.5, 'white', 'circle');
+        loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 130, 6, 'white', 'circle');
+
+        ls.showPanel();
+        map.on('singleclick', function(evt) {
+            var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
+            if (feature) {
+                var props = feature.getProperties(), table = '<table>';
+                for (var key in props) { 
+                    if (key !== 'geometry' && key !== 'id') { 
+                        table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
+                    } 
+                }
+                content.innerHTML = table + '</table>'; overlay.setPosition(evt.coordinate);
+            } else { overlay.setPosition(undefined); }
+        });
+        map.on('pointermove', function(e) { if (e.dragging) return; var hit = map.hasFeatureAtPixel(map.getEventPixel(e.originalEvent)); map.getTargetElement().style.cursor = hit ? 'pointer' : ''; });
+        </script>
+    </body>
+</html>
