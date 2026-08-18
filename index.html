@@ -18,7 +18,7 @@
             /* Left side: Title & Zoom */
             #title-box { left: 10px; width: 280px; }
             #title-box h1 { margin: 0; font-size: 19px; color: #333; font-weight: 600; letter-spacing: -0.5px; }
-            .ol-zoom { top: 70px !important; left: 10px !important; }
+            .ol-zoom { top: 105px !important; left: 10px !important; }
 
             /* Right side: Sidebar Column */
             #abstract-box { right: 20px; width: 260px; padding: 12px; }
@@ -65,7 +65,15 @@
         <title>Global Transverse Drainages</title>
     </head>
     <body>
-        <div id="title-box" class="top-panel"><h1>Global Transverse Drainages</h1></div>
+        <div id="title-box" class="top-panel">
+            <h1>Global Transverse Drainages</h1>
+            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; color: #555; font-weight: 600;">Data Repository:</span>
+                <a href="https://doi.org/10.5281/zenodo.21988479" target="_blank" rel="noopener noreferrer" style="display: inline-flex; vertical-align: middle;">
+                    <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21988479.svg" alt="DOI: 10.5281/zenodo.21988479" style="height: 18px;">
+                </a>
+            </div>
+        </div>
         
         <div id="abstract-box" class="top-panel">
             <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
@@ -140,7 +148,6 @@
                 var props = feature.getProperties(), table = '<table>';
                 for (var key in props) { 
                     if (key !== 'geometry' && key !== 'id') { 
-                        // Raw keys (e.g. MAIN_RIV) displayed directly
                         table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
                     } 
                 }
