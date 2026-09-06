@@ -99,19 +99,56 @@
         var ls = new ol.control.LayerSwitcher({ activationMode: 'click', collapsed: false });
         map.addControl(ls);
 
-        // Search Logic
+        // Highlight Layer Setup
+        var highlightSource = new ol.source.Vector();
+        var highlightLayer = new ol.layer.Vector({
+            source: highlightSource,
+            zIndex: 9999,
+            style: new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 10,
+                    fill: new ol.style.Fill({ color: 'rgba(255, 204, 0, 0.8)' }),
+                    stroke: new ol.style.Stroke({ color: '#ff3300', width: 3 })
+                })
+            })
+        });
+        map.addLayer(highlightLayer);
+
+        // Search Logic with Highlighting
         document.getElementById('search-btn').onclick = function() {
-            var q = document.getElementById('search-input').value;
+            var q = document.getElementById('search-input').value.trim();
             if (q.length < 3) return;
-            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + q)
-                .then(r => r.json()).then(data => {
+
+            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
                     if (data.length > 0) {
                         var coord = ol.proj.fromLonLat([parseFloat(data[0].lon), parseFloat(data[0].lat)]);
-                        map.getView().animate({ center: coord, zoom: 10, duration: 2000 });
-                    } else { alert("Location not found."); }
+                        
+                        highlightSource.clear();
+
+                        var feature = new ol.Feature({
+                            geometry: new ol.geom.Point(coord),
+                            name: data[0].display_name
+                        });
+                        highlightSource.addFeature(feature);
+
+                        map.getView().animate({ center: coord, zoom: 11, duration: 1500 });
+
+                        content.innerHTML = '<strong>Matched Location:</strong><br><span style="font-size:11px;">' + data[0].display_name + '</span>';
+                        overlay.setPosition(coord);
+                    } else { 
+                        alert("Location not found."); 
+                    }
+                })
+                .catch(err => {
+                    console.error("Geocoding failed:", err);
+                    alert("Error retrieving location data.");
                 });
         };
-        document.getElementById('search-input').onkeypress = (e) => { if (e.key === "Enter") document.getElementById('search-btn').click(); };
+        document.getElementById('search-input').onkeypress = (e) => { 
+            if (e.key === "Enter") document.getElementById('search-btn').click(); 
+        };
 
         function getVectorStyle(color, width, radius, strokeColor) {
             return function(feature, resolution) {
