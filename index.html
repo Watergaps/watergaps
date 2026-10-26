@@ -24,6 +24,8 @@
             #abstract-box { right: 20px; width: 260px; padding: 12px; }
             #abstract-box p { margin: 0; font-size: 11px; color: #444; line-height: 1.4; }
             #abstract-box .disclaimer { display: block; margin-top: 6px; font-style: italic; font-size: 10px; color: #8e44ad; border-top: 1px solid #eee; padding-top: 4px; }
+            #abstract-box .disclaimer a { color: #8e44ad; text-decoration: underline; font-weight: 600; }
+            #abstract-box .disclaimer a:hover { color: #5e2d79; }
             
             #search-container {
                 position: absolute;
@@ -61,6 +63,24 @@
             #popup-content td:first-child { width: 110px; font-weight: bold; color: #666; padding-right: 8px; }
             #popup-content td:last-child { color: #000; text-align: left; }
             #popup-content tr:nth-child(even) { background-color: #fafafa; }
+            
+            /* Popup Correction Button */
+            .popup-feedback-btn {
+                display: block;
+                margin-top: 10px;
+                background-color: #2ea44f;
+                color: white;
+                text-align: center;
+                padding: 6px 10px;
+                border-radius: 4px;
+                text-decoration: none;
+                font-size: 11px;
+                font-weight: 600;
+                transition: background-color 0.2s;
+            }
+            .popup-feedback-btn:hover {
+                background-color: #2c974b;
+            }
         </style>
         <title>Global Transverse Drainages</title>
     </head>
@@ -77,7 +97,10 @@
         
         <div id="abstract-box" class="top-panel">
             <p>This map displays endorheic and exorheic watersheds associated with transverse drainage systems. Click any feature to view drainage attributes.</p>
-            <span class="disclaimer">Note: Work in progress / Subject to change.</span>
+            <span class="disclaimer">
+                Note: Work in progress / Subject to change. 
+                <a href="https://github.com/Watergaps/watergaps/issues/new?title=General%20Feedback&labels=feedback" target="_blank">Leave feedback</a>
+            </span>
         </div>
 
         <div id="search-container"><input type="text" id="search-input" placeholder="Search..."><button id="search-btn">🔍</button></div>
@@ -179,18 +202,46 @@
         loadR2Layer('pour points into the td.fgb', '#e31a1c', 1, 'Pour points (PP) into the TD', 130, 6, 'white', 'circle');
 
         ls.showPanel();
+        
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
             if (feature) {
-                var props = feature.getProperties(), table = '<table>';
+                var props = feature.getProperties();
+                
+                // Extract useful identifiers for the bug report
+                var reachName = props.RIVER_NAME || props.river_name || props.NAME || props.name || "Unnamed Reach";
+                var dbIndex = props.DATABASE_INDEX_NO || props.TD_INDEX_NO || props.ID || props.id || "Unknown ID";
+                
+                // Build attribute table
+                var table = '<table>';
                 for (var key in props) { 
                     if (key !== 'geometry' && key !== 'id') { 
                         table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
                     } 
                 }
-                content.innerHTML = table + '</table>'; overlay.setPosition(evt.coordinate);
-            } else { overlay.setPosition(undefined); }
+                table += '</table>';
+
+                // Construct pre-filled GitHub Issue URL
+                var issueTitle = encodeURIComponent(`Correction / Feedback for Reach: ${reachName} (${dbIndex})`);
+                var issueBody = encodeURIComponent(
+                    `### Reach Correction / Feedback\n\n` +
+                    `- **River / Reach Name:** ${reachName}\n` +
+                    `- **Database Index No / ID:** ${dbIndex}\n` +
+                    `- **Issue Type:** [ ] Incorrect Name  [ ] Transverse Classification Error  [ ] Other\n\n` +
+                    `**Description of error / proposed correction:**\n[Please describe what needs to be changed, e.g., correcting the classification or name]\n\n` +
+                    `--- *Submitted interactively via watergaps.com map popup*`
+                );
+                var githubUrl = `https://github.com/Watergaps/watergaps/issues/new?title=${issueTitle}&body=${issueBody}&labels=data-correction`;
+
+                // Combine table with the new GitHub feedback button
+                content.innerHTML = table + `<a href="${githubUrl}" target="_blank" class="popup-feedback-btn">💬 Suggest Correction / Report Error</a>`;
+                
+                overlay.setPosition(evt.coordinate);
+            } else { 
+                overlay.setPosition(undefined); 
+            }
         });
+
         map.on('pointermove', function(e) { if (e.dragging) return; var hit = map.hasFeatureAtPixel(map.getEventPixel(e.originalEvent)); map.getTargetElement().style.cursor = hit ? 'pointer' : ''; });
         </script>
     </body>
