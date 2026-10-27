@@ -214,13 +214,13 @@
                 var dbIndex = props.DATABASE_INDEX_NO || props.TD_INDEX_NO || props.ID || props.id || "Unknown ID";
                 
                 // Construct pre-filled GitHub Issue URL
-                var issueTitle = encodeURIComponent(`Correction / Feedback for Reach: ${reachName} (${dbIndex})`);
+                var issueTitle = encodeURIComponent(`Comment / Correction for Reach: ${reachName} (${dbIndex})`);
                 var issueBody = encodeURIComponent(
-                    `### Reach Correction / Feedback\n\n` +
+                    `### Reach Comment / Correction / Report Error\n\n` +
                     `- **River / Reach Name:** ${reachName}\n` +
                     `- **Database Index No / ID:** ${dbIndex}\n` +
-                    `- **Issue Type:** [ ] Incorrect Name  [ ] Transverse Classification Error  [ ] Other\n\n` +
-                    `**Description of error / proposed correction:**\n[Please describe what needs to be changed, e.g., correcting the classification or name]\n\n` +
+                    `- **Feedback Type:** [ ] Comment / General Discussion  [ ] Incorrect Name  [ ] Transverse Classification Error  [ ] Other\n\n` +
+                    `**Comments / proposed correction:**\n[Please describe your comment or what needs to be changed]\n\n` +
                     `--- *Submitted interactively via watergaps.com map popup*`
                 );
                 var githubUrl = `https://github.com/Watergaps/watergaps/issues/new?title=${issueTitle}&body=${issueBody}&labels=data-correction`;
@@ -235,7 +235,7 @@
                 table += '</table>';
 
                 // Put button at the TOP, followed by the table
-                content.innerHTML = `<a href="${githubUrl}" target="_blank" class="popup-feedback-btn">💬 Suggest Correction / Report Error</a>` + table;
+                content.innerHTML = `<a href="${githubUrl}" target="_blank" class="popup-feedback-btn">💬 Comment / Suggest Correction / Report Error</a>` + table;
                 
                 overlay.setPosition(evt.coordinate);
             } else { 
