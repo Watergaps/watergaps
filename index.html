@@ -105,7 +105,7 @@
             </span>
         </div>
 
-        <div id="search-container"><input type="text" id="search-input" placeholder="Search..."><button id="search-btn">🔍</button></div>
+        <div id="search-container"><input type="text" id="search-input" placeholder="Search river or location..."><button id="search-btn">🔍</button></div>
 
         <div id="map"></div>
         <div id="popup" class="ol-popup"><a href="#" id="popup-closer" class="ol-popup-closer"></a><div id="popup-content"></div></div>
@@ -139,7 +139,38 @@
         });
         map.addLayer(highlightLayer);
 
-        // Search Logic with Highlighting
+        // Reference store for the TD Reach layer
+        var tdReachLayer = null;
+
+        function renderFeaturePopup(feature, coord) {
+            var props = feature.getProperties();
+            var reachName = props.RIVER_NAME || props.river_name || props.NAME || props.name || "Unnamed Reach";
+            var dbIndex = props.DATABASE_INDEX_NO || props.TD_INDEX_NO || props.ID || props.id || "Unknown ID";
+            
+            var issueTitle = encodeURIComponent(`Comment / Correction for Reach: ${reachName} (${dbIndex})`);
+            var issueBody = encodeURIComponent(
+                `### Reach Comment / Correction / Report Error\n\n` +
+                `- **River / Reach Name:** ${reachName}\n` +
+                `- **Database Index No / ID:** ${dbIndex}\n` +
+                `- **Feedback Type:** [ ] Comment / General Discussion  [ ] Incorrect Name  [ ] Transverse Classification Error  [ ] Other\n\n` +
+                `**Comments / proposed correction:**\n[Please describe your comment or what needs to be changed]\n\n` +
+                `--- *Submitted interactively via watergaps.com map popup*`
+            );
+            var githubUrl = `https://github.com/Watergaps/watergaps/issues/new?title=${issueTitle}&body=${issueBody}&labels=data-correction`;
+
+            var table = '<table>';
+            for (var key in props) { 
+                if (key !== 'geometry' && key !== 'id') { 
+                    table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
+                } 
+            }
+            table += '</table>';
+
+            content.innerHTML = `<a href="${githubUrl}" target="_blank" class="popup-feedback-btn">💬 Comment / Suggest Correction / Report Error</a>` + table;
+            overlay.setPosition(coord);
+        }
+
+        // Smart Search Logic
         document.getElementById('search-btn').onclick = function() {
             var q = document.getElementById('search-input').value.trim();
             if (q.length < 3) return;
@@ -149,19 +180,42 @@
                 .then(data => {
                     if (data.length > 0) {
                         var coord = ol.proj.fromLonLat([parseFloat(data[0].lon), parseFloat(data[0].lat)]);
-                        
                         highlightSource.clear();
 
-                        var feature = new ol.Feature({
-                            geometry: new ol.geom.Point(coord),
-                            name: data[0].display_name
-                        });
-                        highlightSource.addFeature(feature);
+                        // Check for nearby TD Reach feature in vector layer
+                        var matchedFeature = null;
+                        var searchBuffer = 25000; // Search within ~25km radius
+                        
+                        if (tdReachLayer) {
+                            var source = tdReachLayer.getSource();
+                            var searchExtent = ol.extent.buffer(ol.extent.createOrUpdateFromCoordinate(coord), searchBuffer);
+                            
+                            // Check intersecting features
+                            source.forEachFeatureIntersectingExtent(searchExtent, function(f) {
+                                if (!matchedFeature) matchedFeature = f;
+                            });
+                        }
 
-                        map.getView().animate({ center: coord, zoom: 11, duration: 1500 });
+                        if (matchedFeature) {
+                            // Focus map on matched TD reach coordinate
+                            var targetExtent = matchedFeature.getGeometry().getExtent();
+                            var centerCoord = ol.extent.getCenter(targetExtent);
+                            map.getView().animate({ center: centerCoord, zoom: 11, duration: 1200 });
+                            
+                            // Directly display feature attributes!
+                            renderFeaturePopup(matchedFeature, centerCoord);
+                        } else {
+                            // Fallback: Show yellow point highlight for general searches
+                            var feature = new ol.Feature({
+                                geometry: new ol.geom.Point(coord),
+                                name: data[0].display_name
+                            });
+                            highlightSource.addFeature(feature);
 
-                        content.innerHTML = '<strong>Matched Location:</strong><br><span style="font-size:11px;">' + data[0].display_name + '</span>';
-                        overlay.setPosition(coord);
+                            map.getView().animate({ center: coord, zoom: 11, duration: 1200 });
+                            content.innerHTML = '<strong>Matched Location:</strong><br><span style="font-size:11px;">' + data[0].display_name + '</span>';
+                            overlay.setPosition(coord);
+                        }
                     } else { 
                         alert("Location not found."); 
                     }
@@ -194,6 +248,11 @@
             const layer = new ol.layer.Vector({ title: iconHtml + layerTitle, source: source, zIndex: zIndex, style: getVectorStyle(color, width, radius, strokeColor) });
             overlayGroup.getLayers().push(layer);
             ls.renderPanel(); 
+            
+            // Store reference to TD reach layer for spatial search matching
+            if (fileName === 'TD reach.fgb') {
+                tdReachLayer = layer;
+            }
         }
 
         loadR2Layer('TD watersheds endorheic streams.fgb', '#845232', 1.8, 'TD watershed endorheic', 1, 0, '', 'line');
@@ -208,37 +267,7 @@
         map.on('singleclick', function(evt) {
             var feature = map.forEachFeatureAtPixel(evt.pixel, function(f) { return f; });
             if (feature) {
-                var props = feature.getProperties();
-                
-                // Extract useful identifiers for the bug report
-                var reachName = props.RIVER_NAME || props.river_name || props.NAME || props.name || "Unnamed Reach";
-                var dbIndex = props.DATABASE_INDEX_NO || props.TD_INDEX_NO || props.ID || props.id || "Unknown ID";
-                
-                // Construct pre-filled GitHub Issue URL
-                var issueTitle = encodeURIComponent(`Comment / Correction for Reach: ${reachName} (${dbIndex})`);
-                var issueBody = encodeURIComponent(
-                    `### Reach Comment / Correction / Report Error\n\n` +
-                    `- **River / Reach Name:** ${reachName}\n` +
-                    `- **Database Index No / ID:** ${dbIndex}\n` +
-                    `- **Feedback Type:** [ ] Comment / General Discussion  [ ] Incorrect Name  [ ] Transverse Classification Error  [ ] Other\n\n` +
-                    `**Comments / proposed correction:**\n[Please describe your comment or what needs to be changed]\n\n` +
-                    `--- *Submitted interactively via watergaps.com map popup*`
-                );
-                var githubUrl = `https://github.com/Watergaps/watergaps/issues/new?title=${issueTitle}&body=${issueBody}&labels=data-correction`;
-
-                // Build attribute table
-                var table = '<table>';
-                for (var key in props) { 
-                    if (key !== 'geometry' && key !== 'id') { 
-                        table += '<tr><td>' + key + '</td><td>' + props[key] + '</td></tr>'; 
-                    } 
-                }
-                table += '</table>';
-
-                // Put button at the TOP, followed by the table
-                content.innerHTML = `<a href="${githubUrl}" target="_blank" class="popup-feedback-btn">💬 Comment / Suggest Correction / Report Error</a>` + table;
-                
-                overlay.setPosition(evt.coordinate);
+                renderFeaturePopup(feature, evt.coordinate);
             } else { 
                 overlay.setPosition(undefined); 
             }
